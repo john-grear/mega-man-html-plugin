@@ -1,0 +1,65 @@
+.mega-man {
+    width: 32px;
+    height: 32px;
+    background-image: url('../images/megaman-attacks.png');
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    transform: scale(4);
+    transform-origin: center;
+}
+
+.mega-man.attacking {
+    background-position: -32px 0;
+}
+
+.mega-man.flipped {
+    transform: scale(-4, 4);
+}
+
+.mega-man.low-charge-state {
+    animation: lowChargeAttack 0.1s steps(1, end) infinite;
+    animation-fill-mode: forwards;
+}
+
+@keyframes lowChargeAttack {
+    0% {
+        background-position: 0 -32px;
+    }
+
+    33% {
+        background-position: -32px -32px;
+    }
+
+    66% {
+        background-position: -64px -32px;
+    }
+
+    100% {
+        background-position: -64px -32px;
+        /* Dummy frame to complete the cycle */
+    }
+}
+
+.mega-man.max-charge-state {
+    animation: maxChargeAttack 0.1s steps(1, end) infinite;
+    animation-fill-mode: forwards;
+}
+
+@keyframes maxChargeAttack {
+    0% {
+        background-position: 0 -64px;
+    }
+
+    33% {
+        background-position: -32px -64px;
+    }
+
+    66% {
+        background-position: -64px -64px;
+    }
+
+    100% {
+        background-position: -64px -64px;
+        /* Dummy frame to complete the cycle */
+    }
+}
