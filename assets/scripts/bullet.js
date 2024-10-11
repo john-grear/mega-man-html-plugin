@@ -56,11 +56,11 @@ export default class Bullet {
      * @returns -1 or 1 depending on if Mega Man is facing left or right, respectively
      */
     static positionBullet(megaMan, bullet) {
-        const direction = megaMan.classList.contains('flipped') ? -1 : 1
-        bullet.style.setProperty('--bullet-direction', direction);
+        const direction = megaMan.direction;
+        bullet.style.setProperty('--direction', direction);
 
         // Position bullet based on Mega Man's position
-        const megaManRect = megaMan.getBoundingClientRect();
+        const megaManRect = megaMan.element.getBoundingClientRect();
         bullet.style.top = `${megaManRect.top + 60}px`;
         bullet.style.left = direction === -1
             ? `${megaManRect.left - 32}px`
@@ -76,13 +76,13 @@ export default class Bullet {
      * @param {int} direction - -1 or 1 depending on if Mega Man is facing left or right, respectively
      */
     static startMovement(bullet, direction) {
-        let bulletPosition = 0;
-        const bulletSpeed = 10 * direction;
+        let position = 0;
+        const velocity = 10 * direction;
 
-        const moveBullet = () => {
+        const move = () => {
             // Update position
-            bulletPosition += bulletSpeed;
-            bullet.style.setProperty('--bullet-position', `${bulletPosition}px`);
+            position += velocity;
+            bullet.style.setProperty('--position', `${position}px`);
 
             // Check if bullet hits the edge of the screen
             const bulletRect = bullet.getBoundingClientRect();
@@ -93,10 +93,10 @@ export default class Bullet {
             }
 
             // Continue animation
-            requestAnimationFrame(moveBullet);
+            requestAnimationFrame(move);
         };
 
-        requestAnimationFrame(moveBullet);
+        requestAnimationFrame(move);
     }
 
     /**

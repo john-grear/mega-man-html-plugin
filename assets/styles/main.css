@@ -1,11 +1,6 @@
 @import url('mega-man.css');
 @import url('bullet.css');
 
-:root {
-    --bullet-position: 0px;
-    --bullet-direction: 1;
-}
-
 body {
     display: flex;
     justify-content: center;
@@ -13,4 +8,3 @@ body {
     height: 100vh;
     margin: 0;
 }
-

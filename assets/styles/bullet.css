@@ -1,11 +1,14 @@
 .bullet {
+    --position: 0px;
+    --direction: 1;
+
     width: 32px;
     height: 32px;
-    background-image: url('../images/megaman-attacks.png');
-    background-position: -64px 0;
+    background-image: url('../images/megaman-animations.png');
+    background-position: -256px 0;
     background-repeat: no-repeat;
     position: absolute;
-    transform: translateX(var(--bullet-position)) scale(calc(var(--bullet-direction) * 4), 4);
+    transform: translateX(var(--position)) scale(calc(var(--direction) * 4), 4);
     transform-origin: center;
 }
 
@@ -16,15 +19,15 @@
 
 @keyframes lowChargeBullet {
     0% {
-        background-position: -96px -32px;
+        background-position: -256px -32px;
     }
 
     50% {
-        background-position: -128px -32px;
+        background-position: -288px -32px;
     }
 
     100% {
-        background-position: -128px -32px;
+        background-position: -288px -32px;
         /* Dummy frame to complete the cycle */
     }
 }
@@ -36,23 +39,23 @@
 
 @keyframes maxChargeBullet {
     0% {
-        background-position: -96px -64px;
+        background-position: -256px -128px;
     }
 
     25% {
-        background-position: -128px -64px;
+        background-position: -288px -128px;
     }
 
     50% {
-        background-position: -160px -64px;
+        background-position: -320px -128px;
     }
 
     75% {
-        background-position: -192px -64px;
+        background-position: -352px -128px;
     }
 
     100% {
-        background-position: -192px -64px;
+        background-position: -352px -128px;
         /* Dummy frame to complete the cycle */
     }
 }
