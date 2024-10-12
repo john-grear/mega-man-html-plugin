@@ -12,6 +12,7 @@ export default class MegaMan {
         x: 0,
         y: 1,
     };
+    walking = false;
     walkingState = 0;
     direction = 1;
 
@@ -46,16 +47,19 @@ export default class MegaMan {
         const rightPressed = activeKeys.d;
         // Don't move if not pressing arrow keys or if both are pressed
         if ((!leftPressed && !rightPressed) || (leftPressed && rightPressed)) {
-            if (this.walkingState > 0) this.stopWalking();
+            if (this.walking) this.stopWalking();
             return;
         }
+
+        // Enable walking
+        this.walking = true;
 
         // Update direction Mega Man is facing
         this.direction = leftPressed ? -1 : 1;
         this.element.style.setProperty('--direction', this.direction);
 
         // Calculate velocity and new x coordinate after walking one frame
-        const velocity = 600 * this.direction * Time.getDeltaTime();
+        const velocity = 500 * this.direction * Time.getDeltaTime();
         const x = this.getCoords().x + velocity;
 
         // Update outerBounds in case page size changed since last movement
@@ -77,6 +81,7 @@ export default class MegaMan {
      * Stop walking loop
      */
     stopWalking() {
+        this.walking = false;
         this.walkingState = 0;
         this.element.style.setProperty('--walking-state', 0);
     }
@@ -97,7 +102,6 @@ export default class MegaMan {
      * Set interval to build up charge, triggering attack state when ready
      */
     startCharging() {
-        this.update();
         this.chargingInterval = setInterval(() => {
             this.buildUpCharge();
         }, 20);
