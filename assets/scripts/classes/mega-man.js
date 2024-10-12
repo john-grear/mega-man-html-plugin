@@ -1,4 +1,6 @@
 import Bullet from './bullet.js';
+import Time from '../utils/time.js';
+import { activeKeys } from '../utils/event-handler.js';
 
 export default class MegaMan {
     // HTML Div Element
@@ -10,7 +12,6 @@ export default class MegaMan {
         x: 0,
         y: 1,
     };
-    walking = false;
     walkingState = 0;
     direction = 1;
 
@@ -31,66 +32,51 @@ export default class MegaMan {
     }
 
     /**
-     * Start walking loop until walking is disabled or reaches the bounds of the window
+     * Main control function that runs every frame to handle all functionality of Mega Man
      */
-    startWalking(direction) {
+    update() {
+        // Walk
+        this.walk();
+
+        // Jump
+    }
+
+    walk() {
+        const leftPressed = activeKeys.a;
+        const rightPressed = activeKeys.d;
+        // Don't move if not pressing arrow keys or if both are pressed
+        if ((!leftPressed && !rightPressed) || (leftPressed && rightPressed)) {
+            if (this.walkingState > 0) this.stopWalking();
+            return;
+        }
+
+        // Update direction Mega Man is facing
+        this.direction = leftPressed ? -1 : 1;
+        this.element.style.setProperty('--direction', this.direction);
+
+        // Calculate velocity and new x coordinate after walking one frame
+        const velocity = 600 * this.direction * Time.getDeltaTime();
+        const x = this.getCoords().x + velocity;
+
         // Update outerBounds in case page size changed since last movement
         MegaMan.outerBounds = document.documentElement.scrollWidth - window.scrollX - 130;
-
-        // Don't allow multiple walking loops
-        if (this.walking) return;
-
-        const velocity = 6 * direction;
-
-        const coords = this.getCoords();
-        const x = coords.x + velocity;
 
         // Don't start walking if already at end of screen
         if (x >= MegaMan.outerBounds || x <= MegaMan.innerBounds) return;
 
-        // Update facing direction
-        this.element.style.setProperty('--direction', direction);
-        this.direction = direction;
+        // Update position variable to translateX in CSS
+        this.coords.x += velocity;
+        this.element.style.setProperty('--position', `${this.coords.x}px`);
 
-        const move = () => {
-            // If walking disabled, stop function
-            if (!this.walking) return;
-
-            // Update position
-            const coords = this.getCoords();
-            const x = coords.x + velocity;
-
-            // Stop walking when reach end of screen
-            if (x >= MegaMan.outerBounds || x <= MegaMan.innerBounds) {
-                this.stopWalking();
-                return;
-            }
-
-            this.coords.x += velocity;
-
-            // Update position variable to translateX in CSS
-            this.element.style.setProperty('--position', `${this.coords.x}px`);
-
-            // Increments walking state to next frame
-            if (++this.walkingState >= 30) this.walkingState = 0;
-            this.element.style.setProperty('--walking-state', Math.floor(this.walkingState / 10) + 1);
-
-            // Continue animation
-            requestAnimationFrame(move);
-        };
-
-        // Call update loop if not already walking
-        if (!this.walking) {
-            this.walking = true;
-            requestAnimationFrame(move);
-        }
+        // Increments walking state to next frame
+        if (++this.walkingState >= 30) this.walkingState = 0;
+        this.element.style.setProperty('--walking-state', Math.floor(this.walkingState / 10) + 1);
     }
 
     /**
      * Stop walking loop
      */
     stopWalking() {
-        this.walking = false;
         this.walkingState = 0;
         this.element.style.setProperty('--walking-state', 0);
     }
@@ -111,6 +97,7 @@ export default class MegaMan {
      * Set interval to build up charge, triggering attack state when ready
      */
     startCharging() {
+        this.update();
         this.chargingInterval = setInterval(() => {
             this.buildUpCharge();
         }, 20);
