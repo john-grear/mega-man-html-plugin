@@ -4,12 +4,8 @@ export default class Time {
 
     // Calculate deltaTime every frame
     static update() {
-        const currentTime = performance.now()
-        this.deltaTime = (currentTime - this.lastTime) / 1000
-        this.lastTime = currentTime
-    }
-
-    static getDeltaTime() {
-        return this.deltaTime;
+        const currentTime = performance.now();
+        this.deltaTime = (currentTime - this.lastTime) / 1000;
+        this.lastTime = currentTime;
     }
 }

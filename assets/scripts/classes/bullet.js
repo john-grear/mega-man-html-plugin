@@ -8,8 +8,12 @@ export default class Bullet {
 
     /**
      * Create and move a bullet until it hits the edge of the screen
+     * 
+     * @param {int} charge - Time (ms) since attack button was first held down
+     * @param {int} direction - -1 or 1 depending on if Mega Man is facing left or right, respectively
+     * @param {DOMRect} boundingClientRect - Mega Man rectangular bounds to use as spawn area for Bullet
      */
-    static shoot(charge, megaMan) {
+    static shoot(charge, direction, boundingClientRect) {
         // If too many bullets or shooting too quickly, do nothing
         const now = Date.now();
         if (Bullet.count >= Bullet.maxBullets || (now - Bullet.lastBulletTime) < Bullet.shootDelay) return;
@@ -20,7 +24,7 @@ export default class Bullet {
 
         const bullet = this.createElement(charge);
 
-        const direction = this.setPosition(megaMan, bullet);
+        this.setPosition(bullet, direction, boundingClientRect);
 
         this.startMovement(bullet, direction);
     }
@@ -28,7 +32,7 @@ export default class Bullet {
     /**
      * Creates a new HTMLDivElement bullet with different look based on the charge held
      * 
-     * @param {int} charge - Time (ms) since attack button was first held down
+     * @param {int} charge
      * @returns HTMLDivElement for the new bullet
      */
     static createElement(charge) {
@@ -51,29 +55,25 @@ export default class Bullet {
     /**
      * Flip and position the bullet based on Mega Man flippped state and position
      * 
-     * @param {HTMLDivElement} megaMan
      * @param {HTMLDivElement} bullet 
-     * @returns -1 or 1 depending on if Mega Man is facing left or right, respectively
+     * @param {int} direction
+     * @param {DOMRect} boundingClientRect
      */
-    static setPosition(megaMan, bullet) {
-        const direction = megaMan.direction;
+    static setPosition(bullet, direction, boundingClientRect) {
         bullet.style.setProperty('--direction', direction);
 
         // Position bullet based on Mega Man's position
-        const megaManRect = megaMan.element.getBoundingClientRect();
-        bullet.style.top = `${megaManRect.top + 60}px`;
+        bullet.style.top = `${boundingClientRect.top + 60}px`;
         bullet.style.left = direction === -1
-            ? `${megaManRect.left - 32}px`
-            : `${megaManRect.right}px`;
-
-        return direction;
+            ? `${boundingClientRect.left - 32}px`
+            : `${boundingClientRect.right}px`;
     }
 
     /**
      * Starts animation to move the bullet across the screen
      * 
      * @param {HTMLDivElement} bullet
-     * @param {int} direction - -1 or 1 depending on if Mega Man is facing left or right, respectively
+     * @param {int} direction
      */
     static startMovement(bullet, direction) {
         let position = 0;
