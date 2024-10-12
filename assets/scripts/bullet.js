@@ -20,7 +20,7 @@ export default class Bullet {
 
         const bullet = this.createElement(charge);
 
-        const direction = this.positionBullet(megaMan, bullet);
+        const direction = this.setPosition(megaMan, bullet);
 
         this.startMovement(bullet, direction);
     }
@@ -55,7 +55,7 @@ export default class Bullet {
      * @param {HTMLDivElement} bullet 
      * @returns -1 or 1 depending on if Mega Man is facing left or right, respectively
      */
-    static positionBullet(megaMan, bullet) {
+    static setPosition(megaMan, bullet) {
         const direction = megaMan.direction;
         bullet.style.setProperty('--direction', direction);
 
@@ -88,7 +88,7 @@ export default class Bullet {
             const bulletRect = bullet.getBoundingClientRect();
             if ((direction === 1 && bulletRect.right >= window.innerWidth - 20)
                 || (direction === -1 && bulletRect.left <= 20)) {
-                this.removeBullet(bullet);
+                this.remove(bullet);
                 return;
             }
 
@@ -104,7 +104,7 @@ export default class Bullet {
      * 
      * @param {HTMLDivElement} bullet
      */
-    static removeBullet(bullet) {
+    static remove(bullet) {
         bullet.remove();
         --Bullet.count;
     }
