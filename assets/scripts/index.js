@@ -1,3 +1,4 @@
+import Bullet from './classes/bullet.js';
 import MegaMan from './classes/mega-man.js';
 import Time from './utils/time.js';
 import './utils/event-handler.js';
@@ -12,6 +13,9 @@ function gameLoop() {
     megaMan.update();
 
     // For each bullet in Bullet.list, call update()
+    Bullet.list.forEach(bullet => {
+        bullet.update();
+    });
 
     requestAnimationFrame(gameLoop);
 }

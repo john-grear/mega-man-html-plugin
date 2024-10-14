@@ -171,8 +171,11 @@ export default class MegaMan {
         // Shifts walking state over 4 to display accurate sprite for attacking
         this.element.style.setProperty('--attacking-state', 4);
 
-        // Spawn bullet and immediately reset charge to disallow multiple charged shots
-        Bullet.shoot(this.charge, this.direction, this.element.getBoundingClientRect());
+        // Spawn bullet
+        const bullet = new Bullet(this.charge, this.direction, this.element.getBoundingClientRect());
+        if (bullet.element != null) bullet.shoot();
+
+        // Immediately reset charge to disallow multiple charged shots
         this.charge = 0;
 
         // Waits 0.25 seconds before resetting to idle animation
