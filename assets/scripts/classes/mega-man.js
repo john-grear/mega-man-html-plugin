@@ -173,7 +173,6 @@ export default class MegaMan {
 
         // Spawn bullet
         const bullet = new Bullet(this.charge, this.direction, this.element.getBoundingClientRect());
-        if (bullet.element != null) bullet.shoot();
 
         // Immediately reset charge to disallow multiple charged shots
         this.charge = 0;

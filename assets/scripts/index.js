@@ -12,7 +12,7 @@ function gameLoop() {
     // Handle all functionality for Mega Man       
     megaMan.update();
 
-    // For each bullet in Bullet.list, call update()
+    // Handle all bullet movement
     Bullet.list.forEach(bullet => {
         bullet.update();
     });
