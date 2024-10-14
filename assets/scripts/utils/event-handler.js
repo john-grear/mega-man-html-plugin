@@ -8,6 +8,10 @@ export const activeKeys = {
 
 document.addEventListener('keydown', (event) => {
     switch (event.key) {
+        case 'ArrowUp':
+        case 'w':
+            activeKeys.w = true;
+            break;
         case 'ArrowLeft':
         case 'a':
             activeKeys.a = true;
@@ -24,6 +28,10 @@ document.addEventListener('keydown', (event) => {
 
 document.addEventListener('keyup', (event) => {
     switch (event.key) {
+        case 'ArrowUp':
+        case 'w':
+            activeKeys.w = false;
+            break;
         case 'ArrowLeft':
         case 'a':
             activeKeys.a = false;

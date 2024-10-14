@@ -17,6 +17,11 @@ export default class MegaMan {
 
     static walkingSpeed = 500;
 
+    // Jump related variables
+    jumping = false;
+
+    static jumpingSpeed = 500;
+
     // Charged state related variables
     chargeInterval = 0;
     charge = 0; // Time (ms) since attack button was first held down
@@ -31,6 +36,8 @@ export default class MegaMan {
     // Window bounds related variables
     static outerBounds = document.documentElement.scrollWidth - window.scrollX - 130; //window.scrollX + window.innerWidth - 160;
     static innerBounds = 0;
+    static upperBounds = 0;
+    static lowerBounds = document.documentElement.scrollHeight - window.scrollY - 130;
 
     constructor() {
         this.element.classList.add('walking-and-charging-state');
@@ -44,13 +51,17 @@ export default class MegaMan {
         this.walk();
 
         // Jump
+        this.jump();
+
+        // Apply gravity
+        this.applyGravity();
 
         // Charge
         this.buildUpCharge();
     }
 
     /**
-     * Walks left or right if not going to be out of bounds, updating the direction, position,
+     * Walks left or right if not going to be out of bounds, updating the direction, positionX,
      * and walkingState for the animation of Mega Man
      * 
      * Variables update translateX call in mega-man.css
@@ -86,7 +97,7 @@ export default class MegaMan {
 
         // Update position variable to translateX in CSS
         this.coords.x += velocity;
-        this.element.style.setProperty('--position', `${this.coords.x}px`);
+        this.element.style.setProperty('--positionX', `${this.coords.x}px`);
 
         // Increments walking state to next frame
         if (++this.walkingState >= 30) this.walkingState = 0;
@@ -100,6 +111,44 @@ export default class MegaMan {
         this.walking = false;
         this.walkingState = 0;
         this.element.style.setProperty('--walking-state', 0);
+    }
+
+    /**
+     * Moves up if not going to be out of bounds, updating positionY and jumpingState
+     * for the animation of Mega Man
+     * 
+     * Variables update translateX call in mega-man.css
+     */
+    jump() {
+        if (!activeKeys.w) {
+            return;
+        }
+
+        // Enable walking
+        this.jumping = true;
+
+        // Calculate velocity and new y coordinate after walking one frame
+        const velocity = MegaMan.jumpingSpeed * Time.deltaTime;
+        const newY = this.getCoords().y + velocity;
+
+        // Update outerBounds in case page size changed since last movement
+        MegaMan.lowerBounds = document.documentElement.scrollWidth - window.scrollX - 130;
+
+        // Don't start walking if already at end of screen
+        if (newY >= MegaMan.lowerBounds || newY <= MegaMan.upperBounds) {
+            return;
+        }
+
+        // Update position variable to translateX in CSS
+        this.coords.y -= velocity;
+        this.element.style.setProperty('--positionY', `${this.coords.y}px`);
+    }
+
+    /**
+     * Move downward until ground is reached
+     */
+    applyGravity() {
+
     }
 
     /**
