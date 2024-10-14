@@ -19,8 +19,11 @@ export default class MegaMan {
 
     // Jump related variables
     jumping = false;
+    jumpTime = 0; // Time (ms) since jump button was first held down
 
-    static jumpingSpeed = 500;
+    static jumpingSpeed = 600;
+    static jumpTimeLimit = 500;
+    static jumpTimeScalar = 2.5;
 
     // Charged state related variables
     chargeInterval = 0;
@@ -49,6 +52,8 @@ export default class MegaMan {
     update() {
         // Walk
         this.walk();
+
+        // Slide TODO
 
         // Jump
         this.jump();
@@ -121,23 +126,24 @@ export default class MegaMan {
      */
     jump() {
         if (!activeKeys.w) {
+            if (this.jumping) this.stopJumping();
             return;
         }
 
-        // Enable walking
+        // Enable jumping
         this.jumping = true;
 
         // Calculate velocity and new y coordinate after walking one frame
         const velocity = MegaMan.jumpingSpeed * Time.deltaTime;
         const newY = this.getCoords().y + velocity;
 
-        // Update outerBounds in case page size changed since last movement
-        MegaMan.lowerBounds = document.documentElement.scrollWidth - window.scrollX - 130;
-
-        // Don't start walking if already at end of screen
-        if (newY >= MegaMan.lowerBounds || newY <= MegaMan.upperBounds) {
+        // Stop jumping if already at top of screen or jump past jumpTimeLimit
+        if (newY <= MegaMan.upperBounds || this.jumpTime >= MegaMan.jumpTimeLimit) {
+            this.stopJumping();
             return;
         }
+
+        this.jumpTime += velocity * MegaMan.jumpTimeScalar;
 
         // Update position variable to translateX in CSS
         this.coords.y -= velocity;
@@ -145,10 +151,41 @@ export default class MegaMan {
     }
 
     /**
+     * Resets all jumping conditions and states, except for being on ground
+     */
+    stopJumping() {
+        this.jumping = false;
+    }
+
+    /**
      * Move downward until ground is reached
      */
     applyGravity() {
+        if (this.jumping) {
+            return;
+        }
 
+        // Check on ground; allow jump and stop gravity
+        // TODO: Needs changed to work with HTML Div elements instead of sea level
+        if (this.coords.y >= 0) {
+            this.jumpTime = 0;
+            return;
+        }
+
+        // Calculate velocity and new y coordinate after walking one frame
+        const velocity = MegaMan.jumpingSpeed * Time.deltaTime;
+        const newY = this.getCoords().y + velocity;
+
+        // Set correct height based on height of element landing on
+        // TODO: Replace 0 with height of element going to land on
+        if (newY < 0) {
+            this.coords.y = 0;
+            this.element.style.setProperty('--positionY', `${0}px`);
+            return;
+        }
+
+        this.coords.y += velocity;
+        this.element.style.setProperty('--positionY', `${this.coords.y}px`);
     }
 
     /**
