@@ -10,7 +10,7 @@ export default class Bullet {
     static list = [];
     static maxBullets = 3;
     static lastBulletTime = 0;
-    static shootDelay = 330;
+    static shootDelay = 100;
 
     static movingSpeed = 10;
 

@@ -45,3 +45,11 @@ document.addEventListener('keyup', (event) => {
             break;
     }
 });
+
+document.addEventListener('mousedown', (event) => {
+    activeKeys.space = true;
+});
+
+document.addEventListener('mouseup', (event) => {
+    activeKeys.space = false;
+});

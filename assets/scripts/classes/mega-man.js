@@ -18,12 +18,15 @@ export default class MegaMan {
     static walkingSpeed = 500;
 
     // Jump related variables
+    jumpButtonReleased = false;
     jumping = false;
     jumpTime = 0; // Time (ms) since jump button was first held down
+    grounded = false;
+    canJump = false;
 
-    static jumpingSpeed = 600;
-    static jumpTimeLimit = 500;
-    static jumpTimeScalar = 2.5;
+    static jumpingSpeed = 650;
+    static jumpTimeLimit = 300;
+    static gravity = 900;
 
     // Charged state related variables
     chargeInterval = 0;
@@ -31,8 +34,9 @@ export default class MegaMan {
     charging = false;
     chargeState = 0;
 
+    static minChargeValue = 250;
     static lowChargeValue = 500;
-    static maxChargeValue = 1500;
+    static maxChargeValue = 1000;
     static chargeAnimationIntervalRate = 20 / 1000; // Time (ms) to transition to next charge frame
     static chargeRate = 2250; // Rate x deltaTime = how much charge to give per frame
 
@@ -87,6 +91,13 @@ export default class MegaMan {
         this.direction = leftPressed ? -1 : 1;
         this.element.style.setProperty('--direction', this.direction);
 
+        // Don't enable walking animation while jumping or falling
+        if (this.grounded) {
+            // Increments walking state to next frame
+            if (++this.walkingState >= 30) this.walkingState = 0;
+            this.element.style.setProperty('--walking-state', Math.floor(this.walkingState / 10) + 1);
+        }
+
         // Calculate velocity and new x coordinate after walking one frame
         const velocity = MegaMan.walkingSpeed * this.direction * Time.deltaTime;
         const newX = this.getCoords().x + velocity;
@@ -96,17 +107,12 @@ export default class MegaMan {
 
         // Don't start walking if already at end of screen
         if (newX >= MegaMan.outerBounds || newX <= MegaMan.innerBounds) {
-            this.stopWalking();
             return;
         }
 
         // Update position variable to translateX in CSS
         this.coords.x += velocity;
         this.element.style.setProperty('--positionX', `${this.coords.x}px`);
-
-        // Increments walking state to next frame
-        if (++this.walkingState >= 30) this.walkingState = 0;
-        this.element.style.setProperty('--walking-state', Math.floor(this.walkingState / 10) + 1);
     }
 
     /**
@@ -114,6 +120,13 @@ export default class MegaMan {
      */
     stopWalking() {
         this.walking = false;
+        this.disableWalkingAnimation();
+    }
+
+    /**
+     * Disables the walking animation and state variable
+     */
+    disableWalkingAnimation() {
         this.walkingState = 0;
         this.element.style.setProperty('--walking-state', 0);
     }
@@ -126,54 +139,72 @@ export default class MegaMan {
      */
     jump() {
         if (!activeKeys.w) {
-            if (this.jumping) this.stopJumping();
+            if (this.jumping) {
+                this.jumping = false;
+            }
+
+            this.jumpButtonReleased = true;
             return;
         }
 
-        // Enable jumping
-        this.jumping = true;
+        // First frame of jumping
+        if (!this.jumping && this.jumpButtonReleased && this.grounded) {
+            this.disableWalkingAnimation();
+            this.disableAttackAnimation();
 
-        // Calculate velocity and new y coordinate after walking one frame
+            // Enable jumping animation and start jump
+            this.jumping = true;
+            this.grounded = false;
+            this.jumpButtonReleased = false;
+            this.element.style.setProperty('--jumping-state', 1);
+        }
+
+        // Don't continue jumping if not jumping
+        if (!this.jumping) return;
+
+        // Calculate velocity for one frame
         const velocity = MegaMan.jumpingSpeed * Time.deltaTime;
         const newY = this.getCoords().y + velocity;
 
         // Stop jumping if already at top of screen or jump past jumpTimeLimit
-        if (newY <= MegaMan.upperBounds || this.jumpTime >= MegaMan.jumpTimeLimit) {
-            this.stopJumping();
+        if (newY < MegaMan.upperBounds || this.jumpTime >= MegaMan.jumpTimeLimit) {
+            this.jumping = false;
             return;
         }
 
-        this.jumpTime += velocity * MegaMan.jumpTimeScalar;
+        // Increment time to stop jumping too far
+        this.jumpTime += velocity;
 
         // Update position variable to translateX in CSS
         this.coords.y -= velocity;
         this.element.style.setProperty('--positionY', `${this.coords.y}px`);
-    }
 
-    /**
-     * Resets all jumping conditions and states, except for being on ground
-     */
-    stopJumping() {
-        this.jumping = false;
+        // In air = no longer grounded
+        this.grounded = false;
     }
 
     /**
      * Move downward until ground is reached
      */
     applyGravity() {
-        if (this.jumping) {
-            return;
-        }
+        // Only apply gravity when jumping is over and not on ground
+        if (this.jumping || this.grounded) return;
 
         // Check on ground; allow jump and stop gravity
         // TODO: Needs changed to work with HTML Div elements instead of sea level
         if (this.coords.y >= 0) {
+            this.jumping = false;
+            this.grounded = true;
             this.jumpTime = 0;
+            this.jumpButtonReleased = false;
+            this.element.style.setProperty('--jumping-state', 0);
+
+            this.disableAttackAnimation();
             return;
         }
 
         // Calculate velocity and new y coordinate after walking one frame
-        const velocity = MegaMan.jumpingSpeed * Time.deltaTime;
+        const velocity = MegaMan.gravity * Time.deltaTime;
         const newY = this.getCoords().y + velocity;
 
         // Set correct height based on height of element landing on
@@ -181,6 +212,7 @@ export default class MegaMan {
         if (newY < 0) {
             this.coords.y = 0;
             this.element.style.setProperty('--positionY', `${0}px`);
+            this.grounded = true;
             return;
         }
 
@@ -209,6 +241,9 @@ export default class MegaMan {
             if (this.charging) this.attack();
             return;
         }
+
+        // Always do initial attack with no charge
+        if (!this.charging) this.attack(true);
 
         // Enable charging
         this.charging = true;
@@ -250,15 +285,23 @@ export default class MegaMan {
     /**
      * Sets the attacking style for Mega Man and shoot a bullet
      */
-    attack() {
+    attack(force = false) {
         // Stop charging
-        this.charging = false;
+        this.charging = force;
 
-        // Shifts walking state over 4 to display accurate sprite for attacking
-        this.element.style.setProperty('--attacking-state', 4);
+        // Allow shot before charge, but don't shoot two in succession unless charge past minimum
+        if (this.charge < MegaMan.minChargeValue && !force) return;
+
+        if (this.grounded) {
+            // Shifts walking state over 4 to display accurate sprite for attacking
+            this.element.style.setProperty('--attacking-state', 4);
+        } else {
+            // Shifts jumping state over 1 to display accurate sprite for attacking
+            this.element.style.setProperty('--attacking-state', 1);
+        }
 
         // Spawn bullet
-        const bullet = new Bullet(this.charge, this.direction, this.element.getBoundingClientRect());
+        new Bullet(this.charge, this.direction, this.element.getBoundingClientRect());
 
         // Immediately reset charge to disallow multiple charged shots
         this.charge = 0;
@@ -268,11 +311,17 @@ export default class MegaMan {
     }
 
     /**
+     * Disables the attack animation
+     */
+    disableAttackAnimation() {
+        this.element.style.setProperty('--attacking-state', 0);
+    }
+
+    /**
      * Reset Mega Man to idle animation
      */
     resetToIdleAnimation() {
-        // Resets attacking state
-        this.element.style.setProperty('--attacking-state', 0);
+        this.disableAttackAnimation();
 
         // Resets charging state
         this.chargeState = 0;

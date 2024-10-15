@@ -2,9 +2,15 @@
     --positionX: 0px;
     --positionY: 0px;
     --direction: 1;
-    --walking-state: 0; /* 0 (idle), 1 - 3 (walking) */
-    --charging-state: 0; /* 0 (none), 1 - 3 (low), 4 - 6 (max) */
-    --attacking-state: 0; /* 0 (none), 1 (idle), 2 - 4 (walking) | 2 - 4 not applicable with charging */
+
+    /* 0 (idle), 1 - 3 (walking) */
+    --walking-state: 0;
+    /* 0 (idle), 1 (jumping) */
+    --jumping-state: 0;
+    /* 0 (none), 1 - 3 (low), 4 - 6 (max) */
+    --charging-state: 0;
+    /* 0 (none), 1 (idle), 2 - 4 (walking) */
+    --attacking-state: 0;
 
     width: 32px;
     height: 32px;
@@ -24,6 +30,6 @@
 
 @keyframes animationState {
     0% {
-        background-position: calc((var(--walking-state) + var(--attacking-state)) * -32px) calc(var(--charging-state) * -32px);
+        background-position: calc((var(--walking-state) + (var(--jumping-state) * 8) + var(--attacking-state)) * -32px) calc(var(--charging-state) * -32px);
     }
 }
