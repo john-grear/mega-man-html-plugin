@@ -4,7 +4,7 @@ export default class Bullet {
     charge = 0;
     direction = 1;
     position = 0;
-    boundingClientRect = null;
+    boundingClientRect = null; // Mega Man bounds
     element = null;
 
     static list = [];
@@ -13,6 +13,10 @@ export default class Bullet {
     static shootDelay = 100;
 
     static movingSpeed = 10;
+
+    static topOffset = 60;
+    static rightOffset = 0;
+    static leftOffset = -32;
 
     constructor(charge, direction, boundingClientRect) {
         // If too many bullets or shooting too quickly, do nothing
@@ -56,11 +60,17 @@ export default class Bullet {
     setPosition() {
         this.element.style.setProperty('--direction', this.direction);
 
-        // Position bullet based on Mega Man's position
-        this.element.style.top = `${this.boundingClientRect.top + 60}px`;
-        this.element.style.left = this.direction === -1
-            ? `${this.boundingClientRect.left - 32}px`
-            : `${this.boundingClientRect.right}px`;
+        // Get the spawn area's position
+        const spawnAreaRect = document.querySelector('.spawn').getBoundingClientRect();
+
+        // Calculate position relative to the spawn area and offset from each side of Mega Man
+        const relativeTop = this.boundingClientRect.top - spawnAreaRect.top + Bullet.topOffset;
+        const relativeLeft = this.boundingClientRect.left - spawnAreaRect.left + Bullet.leftOffset;
+        const relativeRight = this.boundingClientRect.right - spawnAreaRect.left + Bullet.rightOffset;
+
+        // Position bullet
+        this.element.style.top = `${relativeTop}px`;
+        this.element.style.left = this.direction === -1 ? `${relativeLeft}px` : `${relativeRight}px`;
     }
 
     /**

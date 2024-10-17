@@ -7,9 +7,13 @@ export default class MegaMan {
     element = document.querySelector('.mega-man');
 
     // Movement related variables
+    origin = {
+        x: window.scrollX + this.element.getBoundingClientRect().left,
+        y: window.scrollY + this.element.getBoundingClientRect().top,
+    }
     coords = {
-        x: 0,
-        y: 0,
+        x: this.origin.x,
+        y: this.origin.y,
     };
     walking = false;
     walkingState = 0;
@@ -43,8 +47,8 @@ export default class MegaMan {
     // Window bounds related variables
     static outerBounds = document.documentElement.scrollWidth - window.scrollX - 130; //window.scrollX + window.innerWidth - 160;
     static innerBounds = 0;
-    static upperBounds = 0;
-    static lowerBounds = document.documentElement.scrollHeight - window.scrollY - 130;
+    static upperBounds = document.documentElement.scrollHeight - window.scrollY - 130;
+    static lowerBounds = 0;
 
     constructor() {
         this.element.classList.add('walking-and-charging-state');
@@ -100,7 +104,7 @@ export default class MegaMan {
 
         // Calculate velocity and new x coordinate after walking one frame
         const velocity = MegaMan.walkingSpeed * this.direction * Time.deltaTime;
-        const newX = this.getCoords().x + velocity;
+        const newX = this.coords.x + velocity;
 
         // Update outerBounds in case page size changed since last movement
         MegaMan.outerBounds = document.documentElement.scrollWidth - window.scrollX - 130;
@@ -110,9 +114,11 @@ export default class MegaMan {
             return;
         }
 
-        // Update position variable to translateX in CSS
-        this.coords.x += velocity;
-        this.element.style.setProperty('--positionX', `${this.coords.x}px`);
+        // Update position variable
+        this.coords.x = newX;
+
+        // Update positionX on screen, offset by the parent origin X coordinate
+        this.element.style.setProperty('--positionX', `${this.coords.x - this.origin.x}px`);
     }
 
     /**
@@ -164,10 +170,10 @@ export default class MegaMan {
 
         // Calculate velocity for one frame
         const velocity = MegaMan.jumpingSpeed * Time.deltaTime;
-        const newY = this.getCoords().y + velocity;
-
+        const newY = this.coords.y - velocity;
+        
         // Stop jumping if already at top of screen or jump past jumpTimeLimit
-        if (newY < MegaMan.upperBounds || this.jumpTime >= MegaMan.jumpTimeLimit) {
+        if (newY >= MegaMan.upperBounds || this.jumpTime >= MegaMan.jumpTimeLimit) {
             this.jumping = false;
             return;
         }
@@ -176,7 +182,7 @@ export default class MegaMan {
         this.jumpTime += velocity;
 
         // Update position variable to translateX in CSS
-        this.coords.y -= velocity;
+        this.coords.y = newY;
         this.element.style.setProperty('--positionY', `${this.coords.y}px`);
 
         // In air = no longer grounded
@@ -186,50 +192,32 @@ export default class MegaMan {
     /**
      * Move downward until ground is reached
      */
-    applyGravity() {
+    applyGravity() { // TODO: Fix gravity to work with new coordinate system
         // Only apply gravity when jumping is over and not on ground
         if (this.jumping || this.grounded) return;
 
         // Check on ground; allow jump and stop gravity
         // TODO: Needs changed to work with HTML Div elements instead of sea level
-        if (this.coords.y >= 0) {
+        if (this.coords.y >= 0) { //< this.origin.y) {
             this.jumping = false;
             this.grounded = true;
             this.jumpTime = 0;
             this.jumpButtonReleased = false;
             this.element.style.setProperty('--jumping-state', 0);
 
+            // Align with ground
+            // TODO: Change to HTML Div Element y coord
+            this.coords.y = 0;
+            this.element.style.setProperty('--positionY', `${0}px`);
+
             this.disableAttackAnimation();
             return;
         }
 
-        // Calculate velocity and new y coordinate after walking one frame
+        // Calculate velocity and update y coordinate to move downwards
         const velocity = MegaMan.gravity * Time.deltaTime;
-        const newY = this.getCoords().y + velocity;
-
-        // Set correct height based on height of element landing on
-        // TODO: Replace 0 with height of element going to land on
-        if (newY < 0) {
-            this.coords.y = 0;
-            this.element.style.setProperty('--positionY', `${0}px`);
-            this.grounded = true;
-            return;
-        }
-
         this.coords.y += velocity;
         this.element.style.setProperty('--positionY', `${this.coords.y}px`);
-    }
-
-    /**
-     * Calculates the coordinates
-     * 
-     * @returns X and Y coordinates
-     */
-    getCoords() {
-        return {
-            x: window.scrollX + this.element.getBoundingClientRect().left,
-            y: window.scrollY + this.element.getBoundingClientRect().top, //+ this.element.getBoundingClientRect().height / 2
-        };
     }
 
     /**

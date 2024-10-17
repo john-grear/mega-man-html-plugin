@@ -12,13 +12,17 @@
     /* 0 (none), 1 (idle), 2 - 4 (walking) */
     --attacking-state: 0;
 
+    /* Sprite Initialization */
     width: 32px;
     height: 32px;
     background-image: url('../images/megaman-animations.png');
     background-position: 0 0;
     background-repeat: no-repeat;
-    transform: translateX(var(--positionX)) translateY(var(--positionY)) scale(calc(var(--direction) * 4), 4);
+
+    /* Position, Movement, and Scale */
+    transform: translate(var(--positionX), var(--positionY)) scale(calc(var(--direction) * 4), 4);
     transform-origin: center;
+    position: absolute;
 }
 
 /* Animation */

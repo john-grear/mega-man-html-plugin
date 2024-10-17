@@ -8,3 +8,14 @@ body {
     height: 100vh;
     margin: 0;
 }
+
+.spawn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 128px;
+    height: 128px;
+    
+    /* Just for visibility */
+    border: 1px solid black;
+}

@@ -2,11 +2,14 @@
     --position: 0px;
     --direction: 1;
 
+    /* Sprite Initialization */
     width: 32px;
     height: 32px;
     background-image: url('../images/megaman-animations.png');
     background-position: -320px 0;
     background-repeat: no-repeat;
+
+    /* Position, Movement, and Scale */
     position: absolute;
     transform: translateX(var(--position)) scale(calc(var(--direction) * 4), 4);
     transform-origin: center;
