@@ -23,6 +23,9 @@
     transform: translate(var(--positionX), var(--positionY)) scale(calc(var(--direction) * 4), 4);
     transform-origin: center;
     position: absolute;
+
+    /* Just for visibility */
+    /* border: 0.25px solid black; */
 }
 
 /* Animation */

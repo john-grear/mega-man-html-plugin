@@ -6,15 +6,23 @@ export default class MegaMan {
     // HTML Div Element
     element = document.querySelector('.mega-man');
 
-    // Movement related variables
+    // Coordinate related variables
     origin = {
         x: window.scrollX + this.element.getBoundingClientRect().left,
         y: window.scrollY + this.element.getBoundingClientRect().top,
     }
-    coords = {
+    coords = { // Tracks position in local context to update CSS positionX and positionY
         x: this.origin.x,
-        y: this.origin.y,
+        y: 0,
     };
+    bounds = { // Tracks position in global context for use with collisions
+        top: this.element.getBoundingClientRect().top,
+        bottom: this.element.getBoundingClientRect().bottom,
+        left: this.element.getBoundingClientRect().left,
+        right: this.element.getBoundingClientRect().right,
+    };
+
+    // Walk related variables
     walking = false;
     walkingState = 0;
     direction = 1;
@@ -32,7 +40,7 @@ export default class MegaMan {
     static jumpTimeLimit = 300;
     static gravity = 900;
 
-    // Charged state related variables
+    // Charge related variables
     chargeInterval = 0;
     charge = 0; // Time (ms) since attack button was first held down
     charging = false;
@@ -44,30 +52,36 @@ export default class MegaMan {
     static chargeAnimationIntervalRate = 20 / 1000; // Time (ms) to transition to next charge frame
     static chargeRate = 2250; // Rate x deltaTime = how much charge to give per frame
 
+    // Collision related variables
+    static minCollisionDetectionDistance = 10;
+
     // Window bounds related variables
-    static outerBounds = document.documentElement.scrollWidth - window.scrollX - 130; //window.scrollX + window.innerWidth - 160;
+    static outerBounds = document.documentElement.scrollWidth - window.scrollX - MegaMan.minCollisionDetectionDistance;
     static innerBounds = 0;
-    static upperBounds = document.documentElement.scrollHeight - window.scrollY - 130;
+    static upperBounds = document.documentElement.scrollHeight - window.scrollY - MegaMan.minCollisionDetectionDistance;
     static lowerBounds = 0;
 
     constructor() {
+        // TODO: Initiate spawn in animation, then enable walking and charging state
         this.element.classList.add('walking-and-charging-state');
     }
 
     /**
      * Main control function that runs every frame to handle all functionality of Mega Man
+     * 
+     * @param {any[]} [collisionObjects=[]] - Objects to detect walking, jumping, or falling collisions
      */
-    update() {
+    update(collisionObjects = []) {
         // Walk
-        this.walk();
+        this.walk(collisionObjects);
 
         // Slide TODO
 
         // Jump
-        this.jump();
+        this.jump(collisionObjects);
 
         // Apply gravity
-        this.applyGravity();
+        this.applyGravity(collisionObjects);
 
         // Charge
         this.buildUpCharge();
@@ -77,14 +91,16 @@ export default class MegaMan {
      * Walks left or right if not going to be out of bounds, updating the direction, positionX,
      * and walkingState for the animation of Mega Man
      * 
-     * Variables update translateX call in mega-man.css
+     * Variables update translate call in mega-man.css
+     * 
+     * @param {any[]} [collisionObjects]
      */
-    walk() {
+    walk(collisionObjects) {
         const leftPressed = activeKeys.a;
         const rightPressed = activeKeys.d;
         // Don't move if not pressing arrow keys or if both are pressed
         if ((!leftPressed && !rightPressed) || (leftPressed && rightPressed)) {
-            if (this.walking) this.stopWalking();
+            if (this.walking) this.disableWalkingAnimation();
             return;
         }
 
@@ -104,46 +120,56 @@ export default class MegaMan {
 
         // Calculate velocity and new x coordinate after walking one frame
         const velocity = MegaMan.walkingSpeed * this.direction * Time.deltaTime;
-        const newX = this.coords.x + velocity;
+        // const newX = this.coords.x + velocity;
 
         // Update outerBounds in case page size changed since last movement
-        MegaMan.outerBounds = document.documentElement.scrollWidth - window.scrollX - 130;
+        MegaMan.outerBounds = document.documentElement.scrollWidth - window.scrollX - MegaMan.minCollisionDetectionDistance;
 
         // Don't start walking if already at end of screen
-        if (newX >= MegaMan.outerBounds || newX <= MegaMan.innerBounds) {
+        if ((this.bounds.right >= MegaMan.outerBounds && this.direction == 1) ||
+            (this.bounds.left <= MegaMan.innerBounds && this.direction == -1)) {
             return;
         }
 
         // Update position variable
-        this.coords.x = newX;
+        this.updateHorizontalBounds(velocity);
 
         // Update positionX on screen, offset by the parent origin X coordinate
         this.element.style.setProperty('--positionX', `${this.coords.x - this.origin.x}px`);
+
+        // Check ground beneath Mega Man after walking and enable gravity accordingly
+        if (!this.jumping && !this.checkOnGround(collisionObjects)) this.enableFallingAnimation(true);
     }
 
     /**
      * Resets all walking conditions and states
      */
-    stopWalking() {
+    disableWalkingAnimation() {
         this.walking = false;
-        this.disableWalkingAnimation();
+        this.walkingState = 0;
+        this.element.style.setProperty('--walking-state', 0);
     }
 
     /**
-     * Disables the walking animation and state variable
+     * Updates the x-coordinate as well as the left and right bounds to use in collision detection
+     * 
+     * @param {int} deltaX 
      */
-    disableWalkingAnimation() {
-        this.walkingState = 0;
-        this.element.style.setProperty('--walking-state', 0);
+    updateHorizontalBounds(deltaX) {
+        this.coords.x += deltaX;
+        this.bounds.left += deltaX;
+        this.bounds.right += deltaX;
     }
 
     /**
      * Moves up if not going to be out of bounds, updating positionY and jumpingState
      * for the animation of Mega Man
      * 
-     * Variables update translateX call in mega-man.css
+     * Variables update translate call in mega-man.css
+     * 
+     * @param {any[]} [collisionObjects]
      */
-    jump() {
+    jump(collisionObjects) {
         if (!activeKeys.w) {
             if (this.jumping) {
                 this.jumping = false;
@@ -154,24 +180,15 @@ export default class MegaMan {
         }
 
         // First frame of jumping
-        if (!this.jumping && this.jumpButtonReleased && this.grounded) {
-            this.disableWalkingAnimation();
-            this.disableAttackAnimation();
-
-            // Enable jumping animation and start jump
-            this.jumping = true;
-            this.grounded = false;
-            this.jumpButtonReleased = false;
-            this.element.style.setProperty('--jumping-state', 1);
-        }
+        if (!this.jumping && this.jumpButtonReleased && this.grounded) this.enableJumpingAnimation();
 
         // Don't continue jumping if not jumping
-        if (!this.jumping) return;
+        if (!this.jumping && !this.grounded) return;
 
         // Calculate velocity for one frame
         const velocity = MegaMan.jumpingSpeed * Time.deltaTime;
         const newY = this.coords.y - velocity;
-        
+
         // Stop jumping if already at top of screen or jump past jumpTimeLimit
         if (newY >= MegaMan.upperBounds || this.jumpTime >= MegaMan.jumpTimeLimit) {
             this.jumping = false;
@@ -181,42 +198,145 @@ export default class MegaMan {
         // Increment time to stop jumping too far
         this.jumpTime += velocity;
 
-        // Update position variable to translateX in CSS
-        this.coords.y = newY;
-        this.element.style.setProperty('--positionY', `${this.coords.y}px`);
+        // Update position variable to translate in CSS
+        this.updateVerticalBounds(-velocity);
 
         // In air = no longer grounded
         this.grounded = false;
     }
 
     /**
-     * Move downward until ground is reached
+     * Set all jumping conditions and states
      */
-    applyGravity() { // TODO: Fix gravity to work with new coordinate system
+    enableJumpingAnimation() {
+        this.disableWalkingAnimation();
+        this.disableAttackingAnimation();
+
+        this.jumping = true;
+        this.grounded = false;
+        this.jumpButtonReleased = false;
+        this.element.style.setProperty('--jumping-state', 1);
+    }
+
+    /**
+     * Set all falling conditions and states
+     */
+    enableFallingAnimation() {
+        this.disableWalkingAnimation();
+        this.disableAttackingAnimation();
+
+        this.grounded = false;
+        this.element.style.setProperty('--jumping-state', 1);
+    }
+
+    /**
+     * Move downward until ground is reached
+     * 
+     * @param {any[]} [collisionObjects]
+     */
+    applyGravity(collisionObjects) {
         // Only apply gravity when jumping is over and not on ground
         if (this.jumping || this.grounded) return;
 
         // Check on ground; allow jump and stop gravity
-        // TODO: Needs changed to work with HTML Div elements instead of sea level
-        if (this.coords.y >= 0) { //< this.origin.y) {
-            this.jumping = false;
-            this.grounded = true;
-            this.jumpTime = 0;
-            this.jumpButtonReleased = false;
-            this.element.style.setProperty('--jumping-state', 0);
-
-            // Align with ground
-            // TODO: Change to HTML Div Element y coord
-            this.coords.y = 0;
-            this.element.style.setProperty('--positionY', `${0}px`);
-
-            this.disableAttackAnimation();
-            return;
-        }
+        if (this.checkOnGround(collisionObjects)) return;
 
         // Calculate velocity and update y coordinate to move downwards
         const velocity = MegaMan.gravity * Time.deltaTime;
-        this.coords.y += velocity;
+        this.updateVerticalBounds(velocity);
+    }
+
+    /**
+     * Iterate through all collisionObjects and bottom of the page to find something below Mega Man within
+     * the miminum collision detection distance and within the x-coordinate bounds of the object for Mega Man
+     * to be able to stand on
+     * 
+     * If that all goes through, disable gravity, align with the object to stand on it perfectly,
+     * and disable attack animation to prevent odd interactions after landing while attacking mid-air
+     *  
+     * @param {any[]} [collisionObjects] - all objects to search for ground beneath Mega Man
+     * @returns boolean based on if ground was found beneath Mega Man or not
+     */
+    checkOnGround(collisionObjects) {
+        // Check on ground at bottom of page
+        const distance = this.getVerticalDistanceToObject(MegaMan.upperBounds);
+        if (Math.abs(distance) <= MegaMan.minCollisionDetectionDistance) {
+            this.disableGravity();
+
+            this.alignVerticalCollision(distance);
+
+            this.disableAttackingAnimation();
+            return true;
+        }
+
+        // Check all possible ground objects
+        for (const object of collisionObjects) {
+            // Check Mega Man below the object
+            if (this.bounds.bottom > object.top) continue;
+
+            // Check not within x bounds of object
+            if (!(this.bounds.right >= object.left && this.bounds.left <= object.right) &
+                !(this.bounds.left >= object.right && this.bounds.right <= object.left)) continue;
+
+            // Check close enough to collide with
+            const distance = this.getVerticalDistanceToObject(object.top);
+            if (Math.abs(distance) > MegaMan.minCollisionDetectionDistance) continue;
+
+            this.disableGravity();
+
+            this.alignVerticalCollision(distance);
+
+            this.disableAttackingAnimation();
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get vertical distance from the top of a collidable object to the bottom of Mega Man
+     * 
+     * @param {number} objectY - y-coordinate for the top of the object where Mega Man would be standing
+     * @returns distance to the upperBounds
+     */
+    getVerticalDistanceToObject(objectY) {
+        return objectY - this.bounds.bottom;
+    }
+
+    /**
+     * Resets all gravity conditions and states
+     */
+    disableGravity() {
+        this.jumping = false;
+        this.grounded = true;
+        this.jumpTime = 0;
+        this.element.style.setProperty('--jumping-state', 0);
+    }
+
+    /**
+     * Offset the coordinates by the distance to perfectly align with the collided object
+     */
+    alignVerticalCollision(distance) {
+        this.updateVerticalBounds(distance);
+    }
+
+    /**
+     * Updates the y-coordinate as well as the top and bottom bounds to use in collision detection
+     * 
+     * @param {int} deltaY 
+     */
+    updateVerticalBounds(deltaY) {
+        this.coords.y += deltaY;
+        this.bounds.top += deltaY;
+        this.bounds.bottom += deltaY;
+
+        this.updatePositionY();
+    }
+
+    /**
+     * Update the positionY CSS variable with current y-coordinate
+     */
+    updatePositionY() {
         this.element.style.setProperty('--positionY', `${this.coords.y}px`);
     }
 
@@ -299,20 +419,25 @@ export default class MegaMan {
     }
 
     /**
-     * Disables the attack animation
+     * Reset all attacking conditions and states
      */
-    disableAttackAnimation() {
+    disableAttackingAnimation() {
         this.element.style.setProperty('--attacking-state', 0);
+    }
+
+    /**
+     * Reset all charging conditions and states
+     */
+    disableChargingAnimation() {
+        this.chargeState = 0;
+        this.element.style.setProperty('--charging-state', 0);
     }
 
     /**
      * Reset Mega Man to idle animation
      */
     resetToIdleAnimation() {
-        this.disableAttackAnimation();
-
-        // Resets charging state
-        this.chargeState = 0;
-        this.element.style.setProperty('--charging-state', 0);
+        this.disableAttackingAnimation();
+        this.disableChargingAnimation();
     }
 }
