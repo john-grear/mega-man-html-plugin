@@ -19,3 +19,10 @@ body {
     /* Just for visibility */
     border: 1px solid black;
 }
+
+.ground {
+    position: absolute;
+    
+    /* Just for visibility */
+    border: 1px solid red;
+}
