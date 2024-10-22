@@ -56,10 +56,10 @@ export default class MegaMan {
     static minCollisionDetectionDistance = 10;
 
     // Window bounds related variables
-    static outerBounds = document.documentElement.scrollWidth - window.scrollX - MegaMan.minCollisionDetectionDistance;
-    static innerBounds = 0;
     static topOfScreen = 0;
     static bottomOfScreen = document.documentElement.scrollHeight - window.scrollY - MegaMan.minCollisionDetectionDistance;
+    static leftSideOfScreen = 0;
+    static rightSideOfScreen = document.documentElement.scrollWidth - window.scrollX - MegaMan.minCollisionDetectionDistance;
 
     constructor() {
         // TODO: Initiate spawn in animation, then enable walking and charging state
@@ -125,10 +125,7 @@ export default class MegaMan {
         MegaMan.outerBounds = document.documentElement.scrollWidth - window.scrollX - MegaMan.minCollisionDetectionDistance;
 
         // Don't start walking if already at end of screen
-        if ((this.bounds.right >= MegaMan.outerBounds && this.direction == 1) ||
-            (this.bounds.left <= MegaMan.innerBounds && this.direction == -1)) {
-            return;
-        }
+        if (this.checkHorizontalCollision(collisionObjects)) return;
 
         // Update position variable
         this.updateHorizontalBounds(velocity);
@@ -181,24 +178,17 @@ export default class MegaMan {
         // First frame of jumping
         if (!this.jumping && this.jumpButtonReleased && this.grounded) this.enableJumpingAnimation();
 
-        // Don't continue jumping if not jumping
+        // Don't continue jumping if not jumping and not on the ground
         if (!this.jumping && !this.grounded) return;
+
+        // Check ceiling above Mega Man or jump time past limit and stop jumping accordingly
+        if (this.checkHitCeiling(collisionObjects) || this.jumpTime >= MegaMan.jumpTimeLimit) {
+            this.jumping = false;
+            return;
+        }
 
         // Calculate velocity for one frame
         const velocity = MegaMan.jumpingSpeed * Time.deltaTime;
-        const newY = this.coords.y - velocity;
-
-        // Check ground beneath Mega Man after walking and enable gravity accordingly
-        if (this.checkHitCeiling(collisionObjects)) {
-            this.jumping = false;
-            return;
-        }
-
-        // Stop jumping if already at top of screen or jump past jumpTimeLimit
-        if (newY >= MegaMan.bottomOfScreen || this.jumpTime >= MegaMan.jumpTimeLimit) {
-            this.jumping = false;
-            return;
-        }
 
         // Increment time to stop jumping too far
         this.jumpTime += velocity;
@@ -252,6 +242,40 @@ export default class MegaMan {
     }
 
     /**
+     * Iterate through all collisionObjects and left and right edges of the page to find any objects near
+     * Mega Man within the miminum collision detection distance and within the x-coordinate bounds of the object for
+     * Mega Man to collide with
+     * 
+     * If that all goes through, stop moving
+     *  
+     * @param {any[]} [collisionObjects] - all objects to search for collisions with Mega Man
+     * @returns boolean based on if something was found near Mega Man or not
+     */
+    checkHorizontalCollision(collisionObjects) {
+        // Check collision with left or right edge of page
+        const leftDistance = this.getDistanceToLeft(MegaMan.leftSideOfScreen);
+        const rightDistance = this.getDistanceToRight(MegaMan.rightSideOfScreen);
+        if ((leftDistance <= MegaMan.minCollisionDetectionDistance && this.direction == -1) ||
+            (rightDistance <= MegaMan.minCollisionDetectionDistance && this.direction == 1)) return true;
+
+        // Check all possible collision objects
+        for (const object of collisionObjects) {
+            // Check not within y bounds of object
+            if (this.checkObjectWithinYBounds(object)) continue;
+
+            // Check close enough to collide with
+            const leftDistance = this.getDistanceToLeft(object.right);
+            const rightDistance = this.getDistanceToRight(object.left);
+            if ((leftDistance > MegaMan.minCollisionDetectionDistance && this.direction == -1) ||
+                (rightDistance > MegaMan.minCollisionDetectionDistance && this.direction == 1)) continue;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Iterate through all collisionObjects and top of the page to find something above Mega Man within
      * the miminum collision detection distance and within the x-coordinate bounds of the object to
      * bonk Mega Man's head into
@@ -263,8 +287,8 @@ export default class MegaMan {
      */
     checkHitCeiling(collisionObjects) {
         // Check hit ceiling on top of page
-        const distance = this.getVerticalDistanceToHead(MegaMan.topOfScreen);
-        if (Math.abs(distance) <= MegaMan.minCollisionDetectionDistance) return true;
+        const distance = this.getDistanceToTop(MegaMan.topOfScreen);
+        if (distance <= MegaMan.minCollisionDetectionDistance) return true;
 
         // Check all possible ceiling objects
         for (const object of collisionObjects) {
@@ -272,19 +296,18 @@ export default class MegaMan {
             if (this.bounds.bottom < object.bottom) continue;
 
             // Check not within x bounds of object
-            if (!(this.bounds.right >= object.left && this.bounds.left <= object.right) &
-                !(this.bounds.left >= object.right && this.bounds.right <= object.left)) continue;
+            if (this.checkObjectWithinXBounds(object)) continue;
 
             // Check close enough to collide with
-            const distance = this.getVerticalDistanceToHead(object.bottom);
-            if (Math.abs(distance) > MegaMan.minCollisionDetectionDistance) continue;
-            
+            const distance = this.getDistanceToTop(object.bottom);
+            if (distance > MegaMan.minCollisionDetectionDistance) continue;
+
             return true;
         }
 
         return false;
     }
-    
+
     /**
      * Iterate through all collisionObjects and bottom of the page to find something below Mega Man within
      * the miminum collision detection distance and within the x-coordinate bounds of the object for Mega Man
@@ -298,13 +321,11 @@ export default class MegaMan {
      */
     checkOnGround(collisionObjects) {
         // Check on ground at bottom of page
-        const distance = this.getVerticalDistanceToFeet(MegaMan.bottomOfScreen);
-        if (Math.abs(distance) <= MegaMan.minCollisionDetectionDistance) {
+        const distance = this.getDistanceToBottom(MegaMan.bottomOfScreen);
+        if (distance <= MegaMan.minCollisionDetectionDistance) {
             this.disableGravity();
 
             this.updateVerticalBounds(distance);
-
-            this.disableAttackingAnimation();
             return true;
         }
 
@@ -314,18 +335,15 @@ export default class MegaMan {
             if (this.bounds.bottom > object.top) continue;
 
             // Check not within x bounds of object
-            if (!(this.bounds.right >= object.left && this.bounds.left <= object.right) &
-                !(this.bounds.left >= object.right && this.bounds.right <= object.left)) continue;
+            if (this.checkObjectWithinXBounds(object)) continue;
 
             // Check close enough to collide with
-            const distance = this.getVerticalDistanceToFeet(object.top);
-            if (Math.abs(distance) > MegaMan.minCollisionDetectionDistance) continue;
+            const distance = this.getDistanceToBottom(object.top);
+            if (distance > MegaMan.minCollisionDetectionDistance) continue;
 
             this.disableGravity();
 
             this.updateVerticalBounds(distance);
-
-            this.disableAttackingAnimation();
             return true;
         }
 
@@ -333,23 +351,67 @@ export default class MegaMan {
     }
 
     /**
+     * Checks if the given object is within the horizontal bounds of Mega Man
+     * 
+     * @param {DOMRect} object - Bounding rectangle of the object to check
+     * @returns {boolean} - True if the object is within Mega Man's X bounds, false otherwise.
+     */
+    checkObjectWithinXBounds(object) {
+        const left = this.bounds.left + MegaMan.minCollisionDetectionDistance;
+        const right = this.bounds.right - MegaMan.minCollisionDetectionDistance;
+        return (right < object.left || left > object.right) && (left < object.right || right > object.left);
+    }
+
+    /**
+     * Checks if the given object is within the vertical bounds of Mega Man
+     * 
+     * @param {DOMRect} object - Bounding rectangle of the object to check
+     * @returns {boolean} - True if the object is within Mega Man's Y bounds, false otherwise.
+     */
+    checkObjectWithinYBounds(object) {
+        const top = this.bounds.top + MegaMan.minCollisionDetectionDistance;
+        const bottom = this.bounds.bottom - MegaMan.minCollisionDetectionDistance;
+        return (top < object.bottom || bottom > object.top) && (bottom < object.top || top > object.bottom);
+    }
+
+    /**
+     * Get horizontal distance from the left edge of a collidable object to the left bounds of Mega Man
+     * 
+     * @param {number} objectX - x-coordinate for the left edge of the object
+     * @returns distance to objectX
+     */
+    getDistanceToLeft(objectX) {
+        return Math.abs(objectX - this.bounds.left);
+    }
+
+    /**
+     * Get horizontal distance from the right edge of a collidable object to the right bounds of Mega Man
+     * 
+     * @param {number} objectX - x-coordinate for the right edge of the object
+     * @returns distance to objectX
+     */
+    getDistanceToRight(objectX) {
+        return Math.abs(objectX - this.bounds.right);
+    }
+
+    /**
      * Get vertical distance from the bottom of a collidable object to the top of Mega Man
      * 
-     * @param {number} objectY - y-coordinate for the bottom of the object where Mega Man would be bonking
-     * @returns distance to the objectY
+     * @param {number} objectY - y-coordinate for the bottom of the object
+     * @returns distance to objectY
      */
-    getVerticalDistanceToHead(objectY) {
-        return objectY - this.bounds.top;
+    getDistanceToTop(objectY) {
+        return Math.abs(objectY - this.bounds.top);
     }
 
     /**
      * Get vertical distance from the top of a collidable object to the bottom of Mega Man
      * 
-     * @param {number} objectY - y-coordinate for the top of the object where Mega Man would be standing
-     * @returns distance to the objectY
+     * @param {number} objectY - y-coordinate for the top of the object
+     * @returns distance to objectY
      */
-    getVerticalDistanceToFeet(objectY) {
-        return objectY - this.bounds.bottom;
+    getDistanceToBottom(objectY) {
+        return Math.abs(objectY - this.bounds.bottom);
     }
 
     /**
@@ -479,6 +541,8 @@ export default class MegaMan {
      * Reset Mega Man to idle animation
      */
     resetToIdleAnimation() {
+        console.log('Resetting to idle animation');
+
         this.disableAttackingAnimation();
         this.disableChargingAnimation();
     }
