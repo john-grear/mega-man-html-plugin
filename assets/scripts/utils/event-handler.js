@@ -1,10 +1,14 @@
+import MegaMan from "../classes/mega-man.js";
+import Window from "./window.js";
+import { megaMan, collisionObjects } from '../index.js';
+
 // Maintains keys being held down
 export const activeKeys = {
     w: false, // Jump will be added later
     a: false, // Move left
     d: false, // Move Right
     space: false, // Attack
-}
+};
 
 document.addEventListener('keydown', (event) => {
     switch (event.key) {
@@ -44,6 +48,10 @@ document.addEventListener('keyup', (event) => {
             activeKeys.space = false;
             break;
     }
+});
+
+window.addEventListener('resize', (event) => {
+    Window.resize(MegaMan.collisionDistance, megaMan, collisionObjects);
 });
 
 document.addEventListener('mousedown', (event) => {

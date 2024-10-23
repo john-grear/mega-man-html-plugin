@@ -1,11 +1,16 @@
 import Bullet from './classes/bullet.js';
+import CollisionObject from './classes/collision-object.js';
 import MegaMan from './classes/mega-man.js';
 import Time from './utils/time.js';
+import Window from './utils/window.js';
 import './utils/event-handler.js';
 
-const megaMan = new MegaMan();
-const collisionObjects = [];
+export const megaMan = new MegaMan();
+export const collisionObjects = [];
 
+/**
+ * Runs the whole interactive every frame
+ */
 function gameLoop() {
     // Update delta time to be used in other classes
     Time.update();
@@ -21,11 +26,19 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-function findWalkableArea() {
+/**
+ * Finds all elements tagged as ground and adds them as CollisionObject's to an array
+ * 
+ * TODO: Change this later to default to all divs in document unless config section toggled
+ */
+function findCollisionObjects() {
     var groundTagElements = Array.from(document.getElementsByClassName('ground'));
 
-    groundTagElements.forEach(ground => collisionObjects.push(ground.getBoundingClientRect()))
+    groundTagElements.forEach(element => collisionObjects.push(new CollisionObject(element)));
 }
 
-findWalkableArea();
+findCollisionObjects();
+
+Window.resize(MegaMan.collisionDistance);
+
 gameLoop();

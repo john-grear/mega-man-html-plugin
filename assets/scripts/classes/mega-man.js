@@ -1,27 +1,9 @@
 import Bullet from './bullet.js';
 import Time from '../utils/time.js';
+import Window from '../utils/window.js';
 import { activeKeys } from '../utils/event-handler.js';
 
 export default class MegaMan {
-    // HTML Div Element
-    element = document.querySelector('.mega-man');
-
-    // Coordinate related variables
-    origin = {
-        x: window.scrollX + this.element.getBoundingClientRect().left,
-        y: window.scrollY + this.element.getBoundingClientRect().top,
-    }
-    coords = { // Tracks position in local context to update CSS positionX and positionY
-        x: this.origin.x,
-        y: 0,
-    };
-    bounds = { // Tracks position in global context for use with collisions
-        top: this.element.getBoundingClientRect().top,
-        bottom: this.element.getBoundingClientRect().bottom,
-        left: this.element.getBoundingClientRect().left,
-        right: this.element.getBoundingClientRect().right,
-    };
-
     // Walk related variables
     walking = false;
     walkingState = 0;
@@ -53,17 +35,28 @@ export default class MegaMan {
     static chargeRate = 2250; // Rate x deltaTime = how much charge to give per frame
 
     // Collision related variables
-    static minCollisionDetectionDistance = 10;
-
-    // Window bounds related variables
-    static topOfScreen = 0;
-    static bottomOfScreen = document.documentElement.scrollHeight - window.scrollY - MegaMan.minCollisionDetectionDistance;
-    static leftSideOfScreen = 0;
-    static rightSideOfScreen = document.documentElement.scrollWidth - window.scrollX - MegaMan.minCollisionDetectionDistance;
+    static collisionDistance = 10;
 
     constructor() {
         // TODO: Initiate spawn in animation, then enable walking and charging state
+        this.element = document.querySelector('.mega-man');
         this.element.classList.add('walking-and-charging-state');
+
+        // Used to offset horizontal position
+        const rect = this.element.getBoundingClientRect();
+        this.origin = {
+            x: window.scrollX + rect.left,
+            y: window.scrollY + rect.top, // Unused at this time
+        }
+
+        // Tracks position in local context to update CSS positionX and positionY
+        // Used for visual position, not collisions
+        this.coords = {
+            x: this.origin.x,
+            y: 0,
+        };
+
+        this.updateBounds();
     }
 
     /**
@@ -120,9 +113,6 @@ export default class MegaMan {
 
         // Calculate velocity and new x coordinate after walking one frame
         const velocity = MegaMan.walkingSpeed * this.direction * Time.deltaTime;
-
-        // Update outerBounds in case page size changed since last movement
-        MegaMan.outerBounds = document.documentElement.scrollWidth - window.scrollX - MegaMan.minCollisionDetectionDistance;
 
         // Don't start walking if already at end of screen
         if (this.checkHorizontalCollision(collisionObjects)) return;
@@ -253,10 +243,10 @@ export default class MegaMan {
      */
     checkHorizontalCollision(collisionObjects) {
         // Check collision with left or right edge of page
-        const leftDistance = this.getDistanceToLeft(MegaMan.leftSideOfScreen);
-        const rightDistance = this.getDistanceToRight(MegaMan.rightSideOfScreen);
-        if ((leftDistance <= MegaMan.minCollisionDetectionDistance && this.direction == -1) ||
-            (rightDistance <= MegaMan.minCollisionDetectionDistance && this.direction == 1)) return true;
+        const leftDistance = this.getDistanceToLeft(Window.left);
+        const rightDistance = this.getDistanceToRight(Window.right);
+        if ((leftDistance <= MegaMan.collisionDistance && this.direction == -1) ||
+            (rightDistance <= MegaMan.collisionDistance && this.direction == 1)) return true;
 
         // Check all possible collision objects
         for (const object of collisionObjects) {
@@ -266,8 +256,8 @@ export default class MegaMan {
             // Check close enough to collide with
             const leftDistance = this.getDistanceToLeft(object.right);
             const rightDistance = this.getDistanceToRight(object.left);
-            if ((leftDistance > MegaMan.minCollisionDetectionDistance && this.direction == -1) ||
-                (rightDistance > MegaMan.minCollisionDetectionDistance && this.direction == 1)) continue;
+            if ((leftDistance > MegaMan.collisionDistance && this.direction == -1) ||
+                (rightDistance > MegaMan.collisionDistance && this.direction == 1)) continue;
 
             return true;
         }
@@ -287,8 +277,8 @@ export default class MegaMan {
      */
     checkHitCeiling(collisionObjects) {
         // Check hit ceiling on top of page
-        const distance = this.getDistanceToTop(MegaMan.topOfScreen);
-        if (distance <= MegaMan.minCollisionDetectionDistance) return true;
+        const distance = this.getDistanceToTop(Window.top);
+        if (distance <= MegaMan.collisionDistance) return true;
 
         // Check all possible ceiling objects
         for (const object of collisionObjects) {
@@ -300,7 +290,7 @@ export default class MegaMan {
 
             // Check close enough to collide with
             const distance = this.getDistanceToTop(object.bottom);
-            if (distance > MegaMan.minCollisionDetectionDistance) continue;
+            if (distance > MegaMan.collisionDistance) continue;
 
             return true;
         }
@@ -321,8 +311,8 @@ export default class MegaMan {
      */
     checkOnGround(collisionObjects) {
         // Check on ground at bottom of page
-        const distance = this.getDistanceToBottom(MegaMan.bottomOfScreen);
-        if (distance <= MegaMan.minCollisionDetectionDistance) {
+        const distance = this.getDistanceToBottom(Window.bottom);
+        if (distance <= MegaMan.collisionDistance) {
             this.disableGravity();
 
             this.updateVerticalBounds(distance);
@@ -339,7 +329,7 @@ export default class MegaMan {
 
             // Check close enough to collide with
             const distance = this.getDistanceToBottom(object.top);
-            if (distance > MegaMan.minCollisionDetectionDistance) continue;
+            if (distance > MegaMan.collisionDistance) continue;
 
             this.disableGravity();
 
@@ -357,8 +347,8 @@ export default class MegaMan {
      * @returns {boolean} - True if the object is within Mega Man's X bounds, false otherwise.
      */
     checkObjectWithinXBounds(object) {
-        const left = this.bounds.left + MegaMan.minCollisionDetectionDistance;
-        const right = this.bounds.right - MegaMan.minCollisionDetectionDistance;
+        const left = this.bounds.left + MegaMan.collisionDistance;
+        const right = this.bounds.right - MegaMan.collisionDistance;
         return (right < object.left || left > object.right) && (left < object.right || right > object.left);
     }
 
@@ -369,8 +359,8 @@ export default class MegaMan {
      * @returns {boolean} - True if the object is within Mega Man's Y bounds, false otherwise.
      */
     checkObjectWithinYBounds(object) {
-        const top = this.bounds.top + MegaMan.minCollisionDetectionDistance;
-        const bottom = this.bounds.bottom - MegaMan.minCollisionDetectionDistance;
+        const top = this.bounds.top + MegaMan.collisionDistance;
+        const bottom = this.bounds.bottom - MegaMan.collisionDistance;
         return (top < object.bottom || bottom > object.top) && (bottom < object.top || top > object.bottom);
     }
 
@@ -541,9 +531,22 @@ export default class MegaMan {
      * Reset Mega Man to idle animation
      */
     resetToIdleAnimation() {
-        console.log('Resetting to idle animation');
-
         this.disableAttackingAnimation();
         this.disableChargingAnimation();
+    }
+
+    /**
+     * Updates position in global context for use with collisions
+     * 
+     * Only to be used during resize event and constructor to prevent constant refresh of the document
+     */
+    updateBounds() {
+        const rect = this.element.getBoundingClientRect();
+        this.bounds = {
+            top: rect.top,
+            bottom: rect.bottom,
+            left: rect.left,
+            right: rect.right,
+        };
     }
 }

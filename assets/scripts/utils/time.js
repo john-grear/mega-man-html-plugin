@@ -2,7 +2,9 @@ export default class Time {
     static lastTime = performance.now();
     static deltaTime = 0;
 
-    // Calculate deltaTime every frame
+    /**
+     * Calculate deltaTime every frame
+     */
     static update() {
         const currentTime = performance.now();
         this.deltaTime = (currentTime - this.lastTime) / 1000;
