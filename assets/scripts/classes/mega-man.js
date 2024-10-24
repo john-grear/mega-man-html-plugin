@@ -6,6 +6,11 @@ import Window from '../utils/window.js';
 import { activeKeys } from '../utils/event-handler.js';
 
 export default class MegaMan {
+    // Spawn related variables
+    spawned = false;
+
+    static spawnSpeed = 15;
+
     // Walk related variables
     direction = 1;
 
@@ -44,17 +49,44 @@ export default class MegaMan {
         const rect = this.element.getBoundingClientRect();
         this.origin = {
             x: window.scrollX + rect.left,
-            y: window.scrollY + rect.top, // Unused at this time
+            y: window.scrollY - rect.top,
         }
 
         // Tracks position in local context to update CSS positionX and positionY
         // Used for visual position, not collisions
         this.coords = {
             x: this.origin.x,
-            y: 0,
+            y: this.origin.y * 2,
         };
 
         this.updateBounds();
+        this.animationController.updateVisibility();
+        this.spawn();
+    }
+
+    /**
+     * Move Mega Man in spawn noodle animation down until they reach spawn area,
+     * then update the spawn animation until time is up, and disable spawn animation
+     */
+    spawn() {
+        if (this.coords.y < 0) {
+            // Drop into place
+            this.updateVerticalBounds(MegaMan.spawnSpeed);
+            requestAnimationFrame(() => this.spawn());
+        } else if (this.coords.y + MegaMan.spawnSpeed > 0) {
+            // Adjust position to 0
+            this.updateVerticalBounds(-this.coords.y);
+
+            // Update spawn animation
+            if (!this.animationController.updateSpawn()) {
+                requestAnimationFrame(() => this.spawn());
+            } else {
+                // Spawn animation finished
+                this.animationController.updateSpawn(true);
+                this.spawned = true;
+                this.updateBounds();
+            }
+        }
     }
 
     /**
@@ -63,6 +95,9 @@ export default class MegaMan {
      * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
      */
     update(collisionObjects = []) {
+        // Check spawned
+        if (!this.spawned) return;
+
         // Walk
         this.walk(collisionObjects);
 

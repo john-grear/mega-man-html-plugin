@@ -1,6 +1,9 @@
 import MegaMan from "./mega-man.js";
 
 export default class MegaManAnimation {
+    static maxSpawnState = 20;
+    static spawnFramePause = 10; // 30 / 10 = 3 frames over 30 update calls
+
     static maxWalkState = 30;
     static walkFramePause = 10; // 30 / 10 = 3 frames over 30 update calls
 
@@ -15,9 +18,10 @@ export default class MegaManAnimation {
      */
     constructor(element) {
         this.element = element;
-        this.element.classList.add('base-animation-state');
+        this.element.classList.add('spawn-animation-state');
         this.style = this.element.style;
 
+        this.spawnState = 0; // 0 - (maxSpawnState - 1)
         this.walkState = 0; // 0 - (maxWalkState - 1)
         this.jumpState = 0; // 0 - 1
         this.chargeState = 0; // 0 - (maxChargeState - 1)
@@ -29,7 +33,7 @@ export default class MegaManAnimation {
      * @param {number} xCoordinate
      */
     updateX(xCoordinate) {
-        this.element.style.setProperty('--positionX', `${xCoordinate}px`);
+        this.style.setProperty('--positionX', `${xCoordinate}px`);
     }
 
     /**
@@ -38,7 +42,7 @@ export default class MegaManAnimation {
      * @param {number} yCoordinate
      */
     updateY(yCoordinate) {
-        this.element.style.setProperty('--positionY', `${yCoordinate}px`);
+        this.style.setProperty('--positionY', `${yCoordinate}px`);
     }
 
     /**
@@ -48,6 +52,37 @@ export default class MegaManAnimation {
      */
     updateDirection(direction = 1) {
         this.style.setProperty('--direction', direction);
+    }
+
+    /**
+     * Update visibility value to hide Mega Man during spawn animation
+     * 
+     * @param {boolean} disable - Set hidden if true, visible if false
+     */
+    updateVisibility(disable = false) {
+        this.style.visibility = disable ? 'hidden' : 'visible';
+    }
+
+    /**
+     * Update the spawn state property. Increment spawnState until maxSpawnState reached,
+     * then reset to 0. Displays a 2 frame animation for spawning after reaching spawn
+     * 
+     * @param {boolean} disable - Remove spawn animation and add base animation state
+     * @returns {boolean} - True when complete
+     */
+    updateSpawn(disable = false) {
+        if (disable) {
+            this.element.classList.remove('spawn-animation-state');
+            this.element.classList.add('base-animation-state');
+            return true;
+        } else {
+            if (++this.spawnState > MegaManAnimation.maxSpawnState) return true;
+
+            this.style.setProperty('--spawn-state',
+                Math.floor(this.spawnState / MegaManAnimation.spawnFramePause) + 1); // 1 - 2
+        }
+
+        return false;
     }
 
     /**
