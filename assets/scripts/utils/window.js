@@ -29,7 +29,7 @@ export default class Window {
         if (megaMan !== null) {
             megaMan.grounded = false;
             megaMan.applyGravity(collisionObjects);
-            megaMan.enableFallingAnimation();
+            megaMan.enableFalling();
         }
     }
 }

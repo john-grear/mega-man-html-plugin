@@ -9,7 +9,7 @@ export const megaMan = new MegaMan();
 export const collisionObjects = [];
 
 /**
- * Runs the whole interactive every frame
+ * Run the whole interactive every frame
  */
 function gameLoop() {
     // Update delta time to be used in other classes
@@ -27,7 +27,7 @@ function gameLoop() {
 }
 
 /**
- * Finds all elements tagged as ground and adds them as CollisionObject's to an array
+ * Find all elements tagged as ground and adds them as CollisionObject's to an array
  * 
  * TODO: Change this later to default to all divs in document unless config section toggled
  */

@@ -37,7 +37,7 @@ export default class Bullet {
     }
 
     /**
-     * Creates a new HTMLDivElement bullet with different sprite set based on the charge held
+     * Create a new HTMLDivElement bullet with different sprite set based on the charge held
      */
     createHtmlElement() {
         this.element = document.createElement('div');
@@ -74,14 +74,14 @@ export default class Bullet {
     }
 
     /**
-     * Main control function that runs every frame to handle all functionality of each Bullet
+     * Main control function that runs every frame to handle all functionality
      */
     update() {
         this.move();
     }
 
     /**
-     * Starts animation to move the bullet across the screen
+     * Start animation to move the bullet across the screen
      */
     move() {
         // Update position
@@ -98,7 +98,7 @@ export default class Bullet {
     }
 
     /**
-     * Removes bullet from HTML Doc and static list
+     * Remove bullet from HTML Doc and static list
      */
     delete() {
         this.element.remove();
@@ -107,6 +107,8 @@ export default class Bullet {
 
     /**
      * Check to ensure not too many bullets are spawned and bullets are spaced out
+     * 
+     * @returns {boolean}
      */
     static canSpawn() {
         return Bullet.list.length < Bullet.maxBullets && (Date.now() - Bullet.lastBulletTime) >= Bullet.shootDelay;

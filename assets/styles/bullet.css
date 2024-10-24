@@ -28,11 +28,6 @@
     50% {
         background-position: -352px -32px;
     }
-
-    100% {
-        background-position: -352px -32px;
-        /* Dummy frame to complete the cycle */
-    }
 }
 
 .bullet.max-charge {
@@ -55,10 +50,5 @@
 
     75% {
         background-position: -416px -128px;
-    }
-
-    100% {
-        background-position: -416px -128px;
-        /* Dummy frame to complete the cycle */
     }
 }

@@ -4,13 +4,13 @@
     --direction: 1;
 
     /* 0 (idle), 1 - 3 (walking) */
-    --walking-state: 0;
+    --walk-state: 0;
     /* 0 (idle), 1 (jumping) */
-    --jumping-state: 0;
-    /* 0 (none), 1 - 3 (low), 4 - 6 (max) */
-    --charging-state: 0;
+    --jump-state: 0;
     /* 0 (none), 1 (idle), 2 - 4 (walking) */
-    --attacking-state: 0;
+    --attack-state: 0;
+    /* 0 (none), 1 - 3 (low), 4 - 6 (max) */
+    --charge-state: 0;
 
     /* Sprite Initialization */
     width: 32px;
@@ -30,13 +30,13 @@
 
 /* Animation */
 
-.mega-man.walking-and-charging-state {
+.mega-man.base-animation-state {
     animation: animationState 0.1s steps(1, end) infinite;
     animation-fill-mode: forwards;
 }
 
 @keyframes animationState {
     0% {
-        background-position: calc((var(--walking-state) + (var(--jumping-state) * 8) + var(--attacking-state)) * -32px) calc(var(--charging-state) * -32px);
+        background-position: calc((var(--walk-state) + (var(--jump-state) * 8) + var(--attack-state)) * -32px) calc(var(--charge-state) * -32px);
     }
 }

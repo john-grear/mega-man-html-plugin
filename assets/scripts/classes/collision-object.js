@@ -5,7 +5,7 @@ export default class CollisionObject {
     }
 
     /**
-     * Updates position in global context for use with collisions
+     * Update position in global context for use with collisions
      * 
      * Only to be used during resize event and constructor to prevent constant refresh of the document
      */
