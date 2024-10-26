@@ -1,6 +1,17 @@
 import MegaMan from "./mega-man.js";
 
 export default class MegaManAnimation {
+    activeStates = {
+        spawn: false,
+        walk: false,
+        jump: false,
+        attack: false,
+        charge: false,
+    };
+
+    static maxIdleState = 400;
+    static maxIdleFrames = 10; // max frames to be idle for
+
     static maxSpawnState = 20;
     static spawnFramePause = 10; // 30 / 10 = 3 frames over 30 update calls
 
@@ -21,6 +32,7 @@ export default class MegaManAnimation {
         this.element.classList.add('spawn-animation-state');
         this.style = this.element.style;
 
+        this.idleState = 0; // 0 - 1
         this.spawnState = 0; // 0 - (maxSpawnState - 1)
         this.walkState = 0; // 0 - (maxWalkState - 1)
         this.jumpState = 0; // 0 - 1
@@ -71,6 +83,8 @@ export default class MegaManAnimation {
      * @returns {boolean} - True when complete
      */
     updateSpawn(disable = false) {
+        this.activeStates.spawn = !disable;
+
         if (disable) {
             this.updateBase();
             return true;
@@ -82,9 +96,9 @@ export default class MegaManAnimation {
 
             const adjustedSpawnState = Math.floor(this.spawnState / MegaManAnimation.spawnFramePause) + 1;
             this.style.setProperty('--spawn-state', adjustedSpawnState); // 1 - 2
-        }
 
-        return false;
+            return false;
+        }
     }
 
     /**
@@ -106,16 +120,58 @@ export default class MegaManAnimation {
     }
 
     /**
+     * Update the idle state property. Increment idleState until maxIdleState reached,
+     * then display idle blinking animation for maxIdleFrames number of frames before
+     * resetting idleState back to 0. Recursively call this function at the end if idle
+     * was not being disabled. When other animations are disabled, they will disable
+     * their variable in the activeStates map and call updateIdle to trigger idle timer
+     * again
+     * 
+     * @param {boolean} disable - Forcibly sets property to 0 if true
+     */
+    updateIdle(disable = false) {
+        if (disable) {
+            this.idleState = 0;
+            this.element.style.setProperty('--idle-state', 0);
+            return;
+        } else {
+            const anyActiveStates = Object.values(this.activeStates).some(state => state);
+
+            if (anyActiveStates) {
+                this.updateIdle(true);
+                return;
+            }
+
+            if (++this.idleState < MegaManAnimation.maxIdleState) {
+                requestAnimationFrame(() => this.updateIdle());
+                return;
+            }
+
+            if (this.idleState === MegaManAnimation.maxIdleState) {
+                this.style.setProperty('--idle-state', 1);
+            } else if (this.idleState >= MegaManAnimation.maxIdleState + MegaManAnimation.maxIdleFrames) {
+                this.idleState = 0;
+                this.style.setProperty('--idle-state', 0);
+            }
+        }
+
+        requestAnimationFrame(() => this.updateIdle());
+    }
+
+    /**
      * Update the walk state property. Increment walkState until maxWalkState reached,
      * then reset to 0. Displays a 3 frame animation for walking
      * 
      * @param {boolean} disable - Forcibly sets property to 0 if true
      */
     updateWalk(disable = false) {
+        this.activeStates.walk = !disable;
+
         // Don't walk if already jumping
         if (disable || this.jumpState > 0) {
             this.walkState = 0;
             this.style.setProperty('--walk-state', 0);
+            this.updateIdle();
         } else {
             this.walkState = (this.walkState + 1) % MegaManAnimation.maxWalkState;
             this.style.setProperty('--walk-state',
@@ -129,8 +185,11 @@ export default class MegaManAnimation {
     * @param {boolean} disable - Forcibly sets property to 0 if true
     */
     updateJump(disable = false) {
+        this.activeStates.jump = !disable;
+
         if (disable) {
             this.jumpState = 0;
+            this.updateIdle();
         } else {
             this.updateWalk(true);
             this.jumpState = 1;
@@ -145,9 +204,12 @@ export default class MegaManAnimation {
     * @param {boolean} disable - Forcibly sets property to 0 if true
     */
     updateAttack(disable = false) {
+        this.activeStates.attack = !disable;
+
         if (disable) {
             this.style.setProperty('--attack-state', 0);
             this.updateCharge(0);
+            this.updateIdle();
             return;
         } else if (this.jumpState > 0) {
             this.style.setProperty('--attack-state', 1);
@@ -167,9 +229,12 @@ export default class MegaManAnimation {
      * @returns {void}
      */
     updateCharge(charge = 0) {
+        this.activeStates.charge = charge > 0;
+
         if (charge === 0) {
             this.chargeState = 0;
             this.element.style.setProperty('--charge-state', 0);
+            this.updateIdle();
             return;
         }
 

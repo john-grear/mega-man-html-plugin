@@ -14,6 +14,7 @@ export default class MegaMan {
     static respawnTime = 10000; // Time (ms) to respawn after dying
 
     // Walk related variables
+    walking = false;
     direction = 1;
 
     static walkingSpeed = 500;
@@ -177,9 +178,14 @@ export default class MegaMan {
         const rightPressed = activeKeys.d;
         // Don't move if not pressing arrow keys or if both are pressed
         if ((!leftPressed && !rightPressed) || (leftPressed && rightPressed)) {
-            this.animationController.updateWalk(true);
+            if (this.walking) {
+                this.animationController.updateWalk(true);
+                this.walking = false;
+            }
             return;
         }
+
+        this.walking = true;
 
         this.direction = leftPressed ? -1 : 1;
         this.animationController.updateDirection(this.direction);

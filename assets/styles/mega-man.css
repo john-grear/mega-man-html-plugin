@@ -3,6 +3,8 @@
     --positionY: 0px;
     --direction: 1;
 
+    /* 0 (not idle), 1 (idle) */
+    --idle-state: 0;
     /* 0 (idle), 1 - 2 (spawning) */
     --spawn-state: 0;
     /* 0 (idle), 1 - 3 (walking) */
@@ -52,6 +54,6 @@
 
 @keyframes baseAnimation {
     0% {
-        background-position: calc((var(--walk-state) + (var(--jump-state) * 8) + var(--attack-state)) * -32px) calc(var(--charge-state) * -32px);
+        background-position: calc(((var(--idle-state) * 14) + var(--walk-state) + (var(--jump-state) * 8) + var(--attack-state)) * -32px) calc(var(--charge-state) * -32px);
     }
 }
