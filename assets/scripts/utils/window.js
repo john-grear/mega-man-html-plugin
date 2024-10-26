@@ -17,19 +17,37 @@ export default class Window {
      * @param {CollisionObject[]} collisionObjects
      */
     static resize(collisionDistance, megaMan = null, collisionObjects = []) {
-        megaMan?.updateBounds();
-        collisionObjects.forEach(object => object.updateBounds());
-
         Window.top = 0;
         Window.bottom = window.innerHeight + scrollY - collisionDistance;
         Window.left = 0;
         Window.right = window.innerWidth + scrollX - collisionDistance;
 
+        collisionObjects.forEach(object => object.updateBounds());
+
         // Apply gravity if originally standing on bottom that has moved
         if (megaMan !== null) {
-            megaMan.grounded = false;
-            megaMan.applyGravity(collisionObjects);
-            megaMan.enableFalling();
+            megaMan.updateBounds();
+
+            if (!megaMan.spawned) return;
+
+            if (Window.isOffScreen(megaMan.bounds)) {
+                megaMan.die();
+            } else {
+                megaMan.grounded = false;
+                megaMan.applyGravity(collisionObjects);
+                megaMan.enableFalling();
+            }
         }
+    }
+
+    /**
+     * Check if bounds are past any of the Windows bounds
+     * 
+     * @param {DOMRect} bounds 
+     * @returns {boolean}
+     */
+    static isOffScreen(bounds) {
+        return bounds.left < Window.left || bounds.right > Window.right ||
+            bounds.top < Window.top || bounds.bottom > Window.bottom;
     }
 }

@@ -72,17 +72,37 @@ export default class MegaManAnimation {
      */
     updateSpawn(disable = false) {
         if (disable) {
-            this.element.classList.remove('spawn-animation-state');
-            this.element.classList.add('base-animation-state');
+            this.updateBase();
             return true;
         } else {
-            if (++this.spawnState > MegaManAnimation.maxSpawnState) return true;
+            if (++this.spawnState > MegaManAnimation.maxSpawnState) {
+                this.spawnState = 0;
+                return true;
+            }
 
-            this.style.setProperty('--spawn-state',
-                Math.floor(this.spawnState / MegaManAnimation.spawnFramePause) + 1); // 1 - 2
+            const adjustedSpawnState = Math.floor(this.spawnState / MegaManAnimation.spawnFramePause) + 1;
+            this.style.setProperty('--spawn-state', adjustedSpawnState); // 1 - 2
         }
 
         return false;
+    }
+
+    /**
+     * Update base and spawn animation states and spawn state property, depending on disable value
+     * 
+     * @param {boolean} disable - Swap spawn and base animation state
+     */
+    updateBase(disable = false) {
+        if (disable) {
+            this.element.classList.remove('base-animation-state');
+            this.element.classList.add('spawn-animation-state');
+
+            this.spawnState = 0;
+            this.style.setProperty('--spawn-state', 0);
+        } else {
+            this.element.classList.remove('spawn-animation-state');
+            this.element.classList.add('base-animation-state');
+        }
     }
 
     /**

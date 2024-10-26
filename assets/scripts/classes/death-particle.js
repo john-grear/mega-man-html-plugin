@@ -4,7 +4,7 @@ export default class DeathParticle {
 
     static list = [];
     static movingSpeed = 1;
-    static maxFrames = 15000;
+    static maxFrames = 2000;
     static offsetParticleTimer = 50;
     static secondParticleOffset = 300;
     static updateBoundsFrame = 5;

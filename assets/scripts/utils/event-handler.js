@@ -10,6 +10,12 @@ export const activeKeys = {
     space: false, // Attack
 };
 
+function resetActiveKeys() {
+    Object.keys(activeKeys).forEach(key => {
+        activeKeys[key] = false;
+    });
+}
+
 document.addEventListener('keydown', (event) => {
     switch (event.key) {
         case 'ArrowUp':
@@ -52,6 +58,7 @@ document.addEventListener('keyup', (event) => {
 
 window.addEventListener('resize', (event) => {
     Window.resize(MegaMan.collisionDistance, megaMan, collisionObjects);
+    resetActiveKeys();
 });
 
 document.addEventListener('mousedown', (event) => {

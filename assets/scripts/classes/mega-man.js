@@ -11,6 +11,7 @@ export default class MegaMan {
     spawned = false;
 
     static spawnSpeed = 15;
+    static respawnTime = 10000; // Time (ms) to respawn after dying
 
     // Walk related variables
     direction = 1;
@@ -42,11 +43,20 @@ export default class MegaMan {
     static collisionDistance = 10;
 
     constructor() {
-        // TODO: Initiate spawn in animation
         this.element = document.querySelector('.mega-man');
         this.animationController = new MegaManAnimation(this.element);
 
-        // Used to offset horizontal position
+        this.moveToSpawnArea();
+        this.updateBounds();
+        this.animationController.updateVisibility();
+        this.spawn();
+    }
+
+    /**
+     * Move Mega Man to new coords above origin
+     */
+    moveToSpawnArea() {
+        // Used to offset position
         const rect = this.element.getBoundingClientRect();
         this.origin = {
             x: window.scrollX + rect.left,
@@ -60,9 +70,12 @@ export default class MegaMan {
             y: this.origin.y * 2,
         };
 
-        this.updateBounds();
-        this.animationController.updateVisibility();
-        this.spawn();
+        // Reposition to spawn coords
+        this.animationController.updateY(this.coords.y);
+        this.animationController.updateX(0);
+
+        // Enable spawn animation state
+        this.animationController.updateBase(true);
     }
 
     /**
@@ -86,13 +99,48 @@ export default class MegaMan {
                 this.animationController.updateSpawn(true);
                 this.spawned = true;
                 this.updateBounds();
-
-                const boundingClientRect = this.element.getBoundingClientRect();
-                for (let i = 0; i < 16; i++) {
-                    new DeathParticle(boundingClientRect, 45 * (i % 8), Math.floor(i / 8));
-                }
             }
         }
+    }
+
+    /**
+     * Disable functionality and visibility, spawn death particles, and set a timer to respawn
+     */
+    die() {
+        // Disable functionality and visibility
+        this.spawned = false;
+        this.animationController.updateVisibility(true);
+
+        // Spawn death particles
+        const boundingClientRect = this.element.getBoundingClientRect();
+        for (let i = 0; i < 16; i++) {
+            new DeathParticle(boundingClientRect, 45 * (i % 8), Math.floor(i / 8));
+        }
+
+        // Set timer to respawn
+        this.setRespawnTimer();
+    }
+
+    /**
+     * Set timer to respawn Mega Man, checking if Mega Man can fit on screen before spawning
+     * If still off screen, reattempt every 0.5 second after that
+     * 
+     * @param {number} [newRespawnTime=0] - Respawn time to use instead of MegaMan.respawnTime
+     */
+    setRespawnTimer(newRespawnTime = 0) {
+        setTimeout(() => {
+            if (Window.isOffScreen(this.bounds)) {
+                this.setRespawnTimer(500);
+                return;
+            }
+
+            // Reposition
+            this.moveToSpawnArea();
+
+            this.updateBounds();
+            this.animationController.updateVisibility();
+            this.spawn();
+        }, newRespawnTime === 0 ? MegaMan.respawnTime : newRespawnTime);
     }
 
     /**
