@@ -8,7 +8,7 @@ export default class Window {
     static right = 0;
 
     /**
-     * Updates the bounds for the Window as well as all objects in it to ensure collisions function correctly
+     * Update the bounds for the Window as well as all objects in it to ensure collisions function correctly
      * 
      * TODO: Add the death animation here later
      * 
@@ -19,7 +19,7 @@ export default class Window {
     static resize(collisionDistance, megaMan = null, collisionObjects = []) {
         megaMan?.updateBounds();
         collisionObjects.forEach(object => object.updateBounds());
-        
+
         Window.top = 0;
         Window.bottom = window.innerHeight + scrollY - collisionDistance;
         Window.left = 0;

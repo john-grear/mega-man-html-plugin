@@ -1,5 +1,6 @@
 import Bullet from './classes/bullet.js';
 import CollisionObject from './classes/collision-object.js';
+import DeathParticle from './classes/death-particle.js';
 import MegaMan from './classes/mega-man.js';
 import Time from './utils/time.js';
 import Window from './utils/window.js';
@@ -21,6 +22,11 @@ function gameLoop() {
     // Handle all bullet movement
     Bullet.list.forEach(bullet => {
         bullet.update();
+    });
+
+    // Handle all death particle movement
+    DeathParticle.list.forEach(particle => {
+        particle.update();
     });
 
     requestAnimationFrame(gameLoop);

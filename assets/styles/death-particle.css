@@ -1,0 +1,54 @@
+.particle-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.death-particle {
+    --positionX: 0px;
+    --positionY: 0px;
+
+    /* Sprite Initialization */
+    width: 32px;
+    height: 32px;
+    background-image: url('../images/megaman-animations.png');
+    background-position: -416px -32px;
+    background-repeat: no-repeat;
+
+    /* Position, Movement, and Scale */
+    position: absolute;
+    transform: translate(var(--positionX), var(--positionY)) scale(4);
+    transform-origin: center;
+}
+
+.death-particle.spread {
+    animation: spread 0.25s steps(1, end) infinite;
+    animation-fill-mode: forwards;
+}
+
+@keyframes spread {
+    0% {
+        background-position: -416px -32px;
+    }
+
+    20% {
+        background-position: -448px -32px;
+    }
+
+    40% {
+        background-position: -480px -32px;
+    }
+
+    60% {
+        background-position: -512px -32px;
+    }
+
+    80% {
+        background-position: -544px -32px;
+    }
+}

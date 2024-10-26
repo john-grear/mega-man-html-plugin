@@ -1,5 +1,6 @@
 import Bullet from './bullet.js';
 import CollisionObject from './collision-object.js';
+import DeathParticle from './death-particle.js';
 import MegaManAnimation from './mega-man-animation.js';
 import Time from '../utils/time.js';
 import Window from '../utils/window.js';
@@ -85,6 +86,11 @@ export default class MegaMan {
                 this.animationController.updateSpawn(true);
                 this.spawned = true;
                 this.updateBounds();
+
+                const boundingClientRect = this.element.getBoundingClientRect();
+                for (let i = 0; i < 16; i++) {
+                    new DeathParticle(boundingClientRect, 45 * (i % 8), Math.floor(i / 8));
+                }
             }
         }
     }
