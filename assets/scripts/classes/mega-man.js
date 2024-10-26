@@ -134,9 +134,7 @@ export default class MegaMan {
                 return;
             }
 
-            // Reposition
             this.moveToSpawnArea();
-
             this.updateBounds();
             this.animationController.updateVisibility();
             this.spawn();
