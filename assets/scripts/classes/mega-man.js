@@ -174,8 +174,8 @@ export default class MegaMan {
      * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
      */
     walk(collisionObjects) {
-        const leftPressed = activeKeys.a;
-        const rightPressed = activeKeys.d;
+        const leftPressed = activeKeys.left;
+        const rightPressed = activeKeys.right;
         // Don't move if not pressing arrow keys or if both are pressed
         if ((!leftPressed && !rightPressed) || (leftPressed && rightPressed)) {
             if (this.walking) {
@@ -226,7 +226,7 @@ export default class MegaMan {
      * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
      */
     jump(collisionObjects) {
-        if (!activeKeys.w) {
+        if (!activeKeys.jump) {
             if (this.jumping) {
                 this.jumping = false;
             }
@@ -468,7 +468,7 @@ export default class MegaMan {
      * Update charge animation based on charge value every time chargeInterval passes the rate
      */
     buildUpCharge() {
-        if (!activeKeys.space) {
+        if (!activeKeys.attack) {
             if (this.charging) this.attack();
             return;
         }
