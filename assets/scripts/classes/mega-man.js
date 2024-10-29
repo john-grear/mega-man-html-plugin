@@ -274,11 +274,10 @@ export default class MegaMan {
      * Set fall conditions and animation
      */
     enableFalling() {
-        this.animationController.updateWalk(true);
-        this.animationController.updateAttack(true);
-
         this.grounded = false;
         this.animationController.updateJump();
+        this.animationController.updateWalk(true);
+        this.animationController.updateAttack(true);
     }
 
     /**

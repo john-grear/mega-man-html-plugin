@@ -9,7 +9,7 @@ export default class MegaManAnimation {
         charge: false,
     };
 
-    static maxIdleState = 400;
+    static maxIdleState = 150;
     static maxIdleFrames = 10; // max frames to be idle for
 
     static maxSpawnState = 20;
@@ -17,6 +17,7 @@ export default class MegaManAnimation {
 
     static maxWalkState = 30;
     static walkFramePause = 10; // 30 / 10 = 3 frames over 30 update calls
+    static kneeBendFrameLength = 5;
 
     static attackTimeout = 250; // Time (ms) before disabling attack animation
 
@@ -35,7 +36,6 @@ export default class MegaManAnimation {
         this.idleState = 0; // 0 - 1
         this.spawnState = 0; // 0 - (maxSpawnState - 1)
         this.walkState = 0; // 0 - (maxWalkState - 1)
-        this.jumpState = 0; // 0 - 1
         this.chargeState = 0; // 0 - (maxChargeState - 1)
     }
 
@@ -159,23 +159,49 @@ export default class MegaManAnimation {
     }
 
     /**
-     * Update the walk state property. Increment walkState until maxWalkState reached,
-     * then reset to 0. Displays a 3 frame animation for walking
+     * Update the walk state property. Start walkState at the knee bend frame length * -1,
+     * incrementing until 0 is reached, which then starts the 3 frame walking animation.
+     * Increment walkState until maxWalkState reached, then reset to 0
      * 
-     * @param {boolean} disable - Forcibly sets property to 0 if true
+     * @param {boolean} disable - Forcibly sets property to 0 if true after displaying the knee bend frame
+     * after some delay. If jumping, skip knee bend frame
      */
     updateWalk(disable = false) {
         this.activeStates.walk = !disable;
 
-        // Don't walk if already jumping
-        if (disable || this.jumpState > 0) {
-            this.walkState = 0;
+        // Don't walk if jumping
+        if (this.activeStates.jump) {
             this.style.setProperty('--walk-state', 0);
+            this.walkState = -MegaManAnimation.kneeBendFrameLength;
             this.updateIdle();
+            return;
+        }
+
+        // Display knee bend frame before disabling
+        if (disable) {
+            if (this.walkState > 0) {
+                this.walkState = -MegaManAnimation.kneeBendFrameLength;
+            }
+
+            if (this.walkState < 0) {
+                this.style.setProperty('--walk-state', 1);
+                ++this.walkState;
+                requestAnimationFrame(() => this.updateWalk(true));
+            } else {
+                this.style.setProperty('--walk-state', 0);
+                this.walkState = -MegaManAnimation.kneeBendFrameLength;
+                this.updateIdle();
+            }
+            return;
+        }
+
+        if (this.walkState < 0) {
+            this.style.setProperty('--walk-state', 1);
+            ++this.walkState;
         } else {
+            const currentWalkFrame = Math.floor(this.walkState / MegaManAnimation.walkFramePause);
+            this.style.setProperty('--walk-state', currentWalkFrame + 2); // Skip idle and knee bend frame
             this.walkState = (this.walkState + 1) % MegaManAnimation.maxWalkState;
-            this.style.setProperty('--walk-state',
-                Math.floor(this.walkState / MegaManAnimation.walkFramePause) + 1); // 1 - 3
         }
     }
 
@@ -188,14 +214,12 @@ export default class MegaManAnimation {
         this.activeStates.jump = !disable;
 
         if (disable) {
-            this.jumpState = 0;
             this.updateIdle();
+            this.style.setProperty('--jump-state', 0);
         } else {
             this.updateWalk(true);
-            this.jumpState = 1;
+            this.style.setProperty('--jump-state', 1);
         }
-
-        this.style.setProperty('--jump-state', this.jumpState);
     }
 
     /**
@@ -211,10 +235,12 @@ export default class MegaManAnimation {
             this.updateCharge(0);
             this.updateIdle();
             return;
-        } else if (this.jumpState > 0) {
-            this.style.setProperty('--attack-state', 1);
+        } else if (this.activeStates.jump) {
+            this.style.setProperty('--attack-state', 1); // Jumping + attacking
+        } else if (this.activeStates.walk) {
+            this.style.setProperty('--attack-state', 4); // Walking + attacking
         } else {
-            this.style.setProperty('--attack-state', 4);
+            this.style.setProperty('--attack-state', 5); // Idle, skip over knee bend frame
         }
 
         // Wait before disabling attack and charge animations
