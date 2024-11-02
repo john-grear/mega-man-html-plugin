@@ -7,10 +7,10 @@ This little gem is designed to bring iconic Mega Man animations and movements to
 ## Features
 
 - Controls
-  - WASD / Arrow Keys for movement
-  - Space / Z for jump
-    - Down + Jump for slide
-  - Shift / X / Left Click for attack
+  - Movement: WASD / Arrow Keys
+  - Jump: Space / Z
+    - Slide: Down + Jump
+  - Attack: Shift / X / Left Click
 - Animations
   - Spawn
   - Death

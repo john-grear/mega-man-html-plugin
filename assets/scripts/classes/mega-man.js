@@ -1,512 +1,664 @@
-import Bullet from './bullet.js';
-import CollisionObject from './collision-object.js';
-import DeathParticle from './death-particle.js';
-import MegaManAnimation from './mega-man-animation.js';
-import Time from '../utils/time.js';
-import Window from '../utils/window.js';
-import { activeKeys } from '../utils/event-handler.js';
+import Bullet from "./bullet.js";
+import CollisionObject from "./collision-object.js";
+import DeathParticle from "./death-particle.js";
+import MegaManAnimation from "./mega-man-animation.js";
+import Time from "../utils/time.js";
+import Window from "../utils/window.js";
+import { activeKeys } from "../utils/event-handler.js";
 
 export default class MegaMan {
-    // Spawn related variables
-    spawned = false;
+  // Spawn related variables
+  spawned = false;
 
-    static spawnSpeed = 15;
-    static respawnTime = 10000; // Time (ms) to respawn after dying
+  static spawnSpeed = 15;
+  static respawnTime = 10000; // Time (ms) to respawn after dying
 
-    // Walk related variables
-    walking = false;
-    direction = 1;
+  // Walk related variables
+  walking = false;
+  direction = 1;
 
-    static walkingSpeed = 500;
+  static walkingSpeed = 500;
 
-    // Jump related variables
-    jumpButtonReleased = false;
-    jumping = false;
-    jumpTime = 0; // Time (ms) since jump button was first held down
-    grounded = false;
+  // Slide related variables
+  slideLocked = false;
+  sliding = false;
+  slideTime = 0;
 
-    static jumpingSpeed = 650;
-    static jumpTimeLimit = 300;
-    static gravity = 900;
+  static slideSpeed = 650;
+  static slideTimeLimit = 300;
 
-    // Charge related variables
-    chargeInterval = 0;
-    charge = 0; // Time (ms) since attack button was first held down
-    charging = false;
+  // Jump related variables
+  jumpButtonReleased = false;
+  jumping = false;
+  jumpTime = 0; // Time (ms) since jump button was first held down
+  grounded = false;
 
-    static minChargeValue = 250;
-    static lowChargeValue = 500;
-    static maxChargeValue = 1000;
-    static chargeIntervalRate = 20 / 1000; // Time (ms) to transition to next charge frame
-    static chargeRate = 2250; // Rate x deltaTime = how much charge to give per frame
+  static jumpingSpeed = 650;
+  static jumpTimeLimit = 300;
+  static gravity = 900;
 
-    // Collision related variables
-    static collisionDistance = 10;
+  // Charge related variables
+  chargeInterval = 0;
+  charge = 0; // Time (ms) since attack button was first held down
+  charging = false;
 
-    constructor() {
-        this.element = document.querySelector('.mega-man');
-        this.animationController = new MegaManAnimation(this.element);
+  static minChargeValue = 250;
+  static lowChargeValue = 500;
+  static maxChargeValue = 1000;
+  static chargeIntervalRate = 20 / 1000; // Time (ms) to transition to next charge frame
+  static chargeRate = 2250; // Rate x deltaTime = how much charge to give per frame
+
+  // Collision related variables
+  static collisionDistance = 10;
+
+  constructor() {
+    this.element = document.querySelector(".mega-man");
+    this.animationController = new MegaManAnimation(this.element);
+
+    this.moveToSpawnArea();
+    this.updateBounds();
+    this.animationController.updateVisibility();
+    this.spawn();
+  }
+
+  /**
+   * Move Mega Man to new coords above origin
+   */
+  moveToSpawnArea() {
+    // Used to offset position
+    const rect = this.element.getBoundingClientRect();
+    this.origin = {
+      x: window.scrollX + rect.left,
+      y: window.scrollY - rect.top,
+    };
+
+    // Tracks position in local context to update CSS positionX and positionY
+    // Used for visual position, not collisions
+    this.coords = {
+      x: this.origin.x,
+      y: this.origin.y * 2,
+    };
+
+    // Reposition to spawn coords
+    this.animationController.updateY(this.coords.y);
+    this.animationController.updateX(0);
+
+    // Enable spawn animation state
+    this.animationController.updateBase(true);
+  }
+
+  /**
+   * Move Mega Man in spawn noodle animation down until they reach spawn area,
+   * then update the spawn animation until time is up, and disable spawn animation
+   */
+  spawn() {
+    if (this.coords.y < 0) {
+      // Drop into place
+      this.updateVerticalBounds(MegaMan.spawnSpeed);
+      requestAnimationFrame(() => this.spawn());
+    } else if (this.coords.y + MegaMan.spawnSpeed > 0) {
+      // Adjust position to 0
+      this.updateVerticalBounds(-this.coords.y);
+
+      // Update spawn animation
+      if (!this.animationController.updateSpawn()) {
+        requestAnimationFrame(() => this.spawn());
+      } else {
+        // Spawn animation finished
+        this.animationController.updateSpawn(true);
+        this.spawned = true;
+        this.updateBounds();
+      }
+    }
+  }
+
+  /**
+   * Disable functionality and visibility, spawn death particles, and set a timer to respawn
+   */
+  die() {
+    // Disable functionality and visibility
+    this.spawned = false;
+    this.animationController.updateVisibility(true);
+
+    // Spawn death particles
+    const boundingClientRect = this.element.getBoundingClientRect();
+    for (let i = 0; i < 16; i++) {
+      new DeathParticle(boundingClientRect, 45 * (i % 8), Math.floor(i / 8));
+    }
+
+    // Set timer to respawn
+    this.setRespawnTimer();
+  }
+
+  /**
+   * Set timer to respawn Mega Man, checking if Mega Man can fit on screen before spawning
+   * If still off screen, reattempt every 0.5 second after that
+   *
+   * @param {number} [newRespawnTime=0] - Respawn time to use instead of MegaMan.respawnTime
+   */
+  setRespawnTimer(newRespawnTime = 0) {
+    setTimeout(
+      () => {
+        if (Window.isOffScreen(this.bounds)) {
+          this.setRespawnTimer(500);
+          return;
+        }
 
         this.moveToSpawnArea();
         this.updateBounds();
         this.animationController.updateVisibility();
         this.spawn();
-    }
+      },
+      newRespawnTime === 0 ? MegaMan.respawnTime : newRespawnTime
+    );
+  }
 
-    /**
-     * Move Mega Man to new coords above origin
-     */
-    moveToSpawnArea() {
-        // Used to offset position
-        const rect = this.element.getBoundingClientRect();
-        this.origin = {
-            x: window.scrollX + rect.left,
-            y: window.scrollY - rect.top,
-        }
+  /**
+   * Main control function that runs every frame to handle all functionality
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   */
+  update(collisionObjects = []) {
+    // Check spawned
+    if (!this.spawned) return;
 
-        // Tracks position in local context to update CSS positionX and positionY
-        // Used for visual position, not collisions
-        this.coords = {
-            x: this.origin.x,
-            y: this.origin.y * 2,
-        };
+    // Walk
+    this.walk(collisionObjects);
 
-        // Reposition to spawn coords
-        this.animationController.updateY(this.coords.y);
-        this.animationController.updateX(0);
+    // Slide
+    this.slide(collisionObjects);
 
-        // Enable spawn animation state
-        this.animationController.updateBase(true);
-    }
+    // Jump
+    this.jump(collisionObjects);
 
-    /**
-     * Move Mega Man in spawn noodle animation down until they reach spawn area,
-     * then update the spawn animation until time is up, and disable spawn animation
-     */
-    spawn() {
-        if (this.coords.y < 0) {
-            // Drop into place
-            this.updateVerticalBounds(MegaMan.spawnSpeed);
-            requestAnimationFrame(() => this.spawn());
-        } else if (this.coords.y + MegaMan.spawnSpeed > 0) {
-            // Adjust position to 0
-            this.updateVerticalBounds(-this.coords.y);
+    // Apply gravity
+    this.applyGravity(collisionObjects);
 
-            // Update spawn animation
-            if (!this.animationController.updateSpawn()) {
-                requestAnimationFrame(() => this.spawn());
-            } else {
-                // Spawn animation finished
-                this.animationController.updateSpawn(true);
-                this.spawned = true;
-                this.updateBounds();
-            }
-        }
-    }
+    // Charge
+    this.buildUpCharge();
+  }
 
-    /**
-     * Disable functionality and visibility, spawn death particles, and set a timer to respawn
-     */
-    die() {
-        // Disable functionality and visibility
-        this.spawned = false;
-        this.animationController.updateVisibility(true);
-
-        // Spawn death particles
-        const boundingClientRect = this.element.getBoundingClientRect();
-        for (let i = 0; i < 16; i++) {
-            new DeathParticle(boundingClientRect, 45 * (i % 8), Math.floor(i / 8));
-        }
-
-        // Set timer to respawn
-        this.setRespawnTimer();
-    }
-
-    /**
-     * Set timer to respawn Mega Man, checking if Mega Man can fit on screen before spawning
-     * If still off screen, reattempt every 0.5 second after that
-     * 
-     * @param {number} [newRespawnTime=0] - Respawn time to use instead of MegaMan.respawnTime
-     */
-    setRespawnTimer(newRespawnTime = 0) {
-        setTimeout(() => {
-            if (Window.isOffScreen(this.bounds)) {
-                this.setRespawnTimer(500);
-                return;
-            }
-
-            this.moveToSpawnArea();
-            this.updateBounds();
-            this.animationController.updateVisibility();
-            this.spawn();
-        }, newRespawnTime === 0 ? MegaMan.respawnTime : newRespawnTime);
-    }
-
-    /**
-     * Main control function that runs every frame to handle all functionality
-     * 
-     * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
-     */
-    update(collisionObjects = []) {
-        // Check spawned
-        if (!this.spawned) return;
-
-        // Walk
-        this.walk(collisionObjects);
-
-        // Slide TODO
-
-        // Jump
-        this.jump(collisionObjects);
-
-        // Apply gravity
-        this.applyGravity(collisionObjects);
-
-        // Charge
-        this.buildUpCharge();
-    }
-
-    /**
-     * Walk left or right, check for collisions, and update direction, horizontal position, and animation
-     * 
-     * Variables update translate call in mega-man.css
-     * 
-     * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
-     */
-    walk(collisionObjects) {
-        const leftPressed = activeKeys.left;
-        const rightPressed = activeKeys.right;
-        // Don't move if not pressing arrow keys or if both are pressed
-        if ((!leftPressed && !rightPressed) || (leftPressed && rightPressed)) {
-            if (this.walking) {
-                this.animationController.updateWalk(true);
-                this.walking = false;
-            }
-            return;
-        }
-
-        this.walking = true;
-
-        this.direction = leftPressed ? -1 : 1;
-        this.animationController.updateDirection(this.direction);
-
-        this.animationController.updateWalk();
-
-        if (this.checkHorizontalCollision(collisionObjects)) return;
-
-        // Update bounds after walking one frame
-        const velocity = MegaMan.walkingSpeed * this.direction * Time.deltaTime;
-        this.updateHorizontalBounds(velocity);
-
-        // Update X position on screen, offset by the parent origin X coordinate
-        this.animationController.updateX(this.coords.x - this.origin.x);
-
-        // Check in air and not jumping to enable falling
-        if (!this.jumping && !this.checkOnGround(collisionObjects)) this.enableFalling(true);
-    }
-
-    /**
-     * Update x-coordinate for positioning and horizontal bounds for collision detection
-     * 
-     * @param {int} deltaX
-     */
-    updateHorizontalBounds(deltaX) {
-        this.coords.x += deltaX;
-        this.bounds.left += deltaX;
-        this.bounds.right += deltaX;
-
-        // Offset position by parent origin x-coordinate
-        this.animationController.updateX(this.coords.x - this.origin.x);
-    }
-
-    /**
-     * Jump, check for collisions, and update vertical position and animation. Jump can only last as long
-     * as jumpTimeLimit and must be on the ground to initiate, obviously
-     * 
-     * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
-     */
-    jump(collisionObjects) {
-        if (!activeKeys.jump) {
-            if (this.jumping) {
-                this.jumping = false;
-            }
-
-            this.jumpButtonReleased = true;
-            return;
-        }
-
-        // First frame of jumping
-        if (!this.jumping && this.jumpButtonReleased && this.grounded) this.enableJumping();
-
-        // Don't continue jumping if not jumping and not on the ground
-        if (!this.jumping && !this.grounded) return;
-
-        // Check ceiling above Mega Man or jump time past limit and stop jumping accordingly
-        if (this.checkHitCeiling(collisionObjects) || this.jumpTime >= MegaMan.jumpTimeLimit) {
-            this.jumping = false;
-            return;
-        }
-
-        // Calculate velocity for one frame
-        const velocity = MegaMan.jumpingSpeed * Time.deltaTime;
-
-        // Increment time to stop jumping too far
-        this.jumpTime += velocity;
-
-        // Update position variable to translate in CSS
-        this.updateVerticalBounds(-velocity);
-
-        // In air = no longer grounded
-        this.grounded = false;
-    }
-
-    /**
-     * Set jump conditions and animation
-     */
-    enableJumping() {
-        this.enableFalling();
-
-        this.jumping = true;
-        this.jumpButtonReleased = false;
-    }
-
-    /**
-     * Set fall conditions and animation
-     */
-    enableFalling() {
-        this.grounded = false;
-        this.animationController.updateJump();
+  /**
+   * Walk left or right, check for collisions, and update direction, horizontal position, and animation
+   *
+   * Variables update translate call in mega-man.css
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   */
+  walk(collisionObjects) {
+    const leftPressed = activeKeys.left;
+    const rightPressed = activeKeys.right;
+    // Don't move if pressing either left or right or both left and right
+    if ((!leftPressed && !rightPressed) || (leftPressed && rightPressed)) {
+      if (this.walking) {
         this.animationController.updateWalk(true);
-        this.animationController.updateAttack(true);
+        this.walking = false;
+      }
+      return;
     }
 
-    /**
-     * Fall until ground is reached
-     * 
-     * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
-     */
-    applyGravity(collisionObjects) {
-        // Check not jumping or grounded
-        if (this.jumping || this.grounded) return;
+    if (this.sliding) return;
 
-        // Check collision with ground
-        if (this.checkOnGround(collisionObjects)) return;
+    this.walking = true;
 
-        // Calculate velocity and update y coordinate to move downwards
-        const velocity = MegaMan.gravity * Time.deltaTime;
-        this.updateVerticalBounds(velocity);
+    this.direction = leftPressed ? -1 : 1;
+    this.animationController.updateDirection(this.direction);
+
+    this.animationController.updateWalk();
+
+    if (this.checkHorizontalCollision(collisionObjects)) return;
+
+    // Update bounds after walking one frame
+    const velocity = MegaMan.walkingSpeed * this.direction * Time.deltaTime;
+    this.updateHorizontalBounds(velocity);
+
+    // Update X position on screen, offset by the parent origin X coordinate
+    this.animationController.updateX(this.coords.x - this.origin.x);
+
+    // Check in air and not jumping to enable falling
+    if (!this.jumping && !this.checkOnGround(collisionObjects))
+      this.enableFalling(true);
+  }
+
+  /**
+   * Attempt to trigger a slide if not already sliding, otherwise continue sliding
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   */
+  slide(collisionObjects) {
+    if (this.sliding) {
+      this.updateSlide(collisionObjects);
+    } else {
+      this.triggerSlide(collisionObjects);
+    }
+  }
+
+  /**
+   * First attempt to unlock the slide if buttons are released, then attempt to initiate a slide if
+   * the buttons were released before, and currently on the ground, pressing both down and jump
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   */
+  triggerSlide(collisionObjects) {
+    this.unlockSlide();
+
+    if (this.slideLocked) return;
+
+    if (this.grounded && activeKeys.down && activeKeys.jump) {
+      this.sliding = true;
+      this.slideLocked = true;
+      this.slideTime = 0;
+      this.animationController.updateSlide();
+      this.updateSlide(collisionObjects);
+    }
+  }
+
+  /**
+   * Slide in the direction facing at a slightly faster speed than walking, check for collisions,
+   * and horizontal position and animation
+   *
+   * Variables update translate call in mega-man.css
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   */
+  updateSlide(collisionObjects) {
+    this.unlockSlide();
+
+    // Increment slide time
+    this.slideTime += MegaMan.slideSpeed * Time.deltaTime;
+
+    // If slide time exceeds limit, disable sliding
+    if (this.slideTime >= MegaMan.slideTimeLimit) {
+      this.disableSlide();
+      return;
     }
 
-    /**
-     * Reset grounded conditions and disable jump animation
-     */
-    disableGravity() {
+    // Check for collisions; stop sliding if a collision is detected
+    if (this.checkHorizontalCollision(collisionObjects)) {
+      this.disableSlide();
+      return;
+    }
+
+    // Calculate and apply horizontal slide velocity
+    const velocity = MegaMan.slideSpeed * this.direction * Time.deltaTime;
+    this.updateHorizontalBounds(velocity);
+
+    // Update X position on screen, offset by the parent origin X coordinate
+    this.animationController.updateX(this.coords.x - this.origin.x);
+
+    // Check if on ground; if not, stop sliding and initiate falling
+    if (!this.checkOnGround(collisionObjects)) {
+      this.disableSlide();
+      this.enableFalling(true);
+      return;
+    }
+
+    // Continue slide animation
+    this.animationController.updateSlide();
+  }
+
+  /**
+   * Allows Mega Man to slide again only when both the down and jump buttons are released or
+   * one button is released, but the time has been reset, meaning the slide was completed
+   */
+  unlockSlide() {
+    const downButtonPressed = activeKeys.down;
+    const jumpButtonPressed = activeKeys.jump;
+    const bothButtonsReleased = !downButtonPressed && !jumpButtonPressed;
+    const timeWasReset = this.slideTime === 0;
+
+    if (bothButtonsReleased || (!jumpButtonPressed && timeWasReset)) {
+      this.slideLocked = false;
+    }
+  }
+
+  /**
+   * Update x-coordinate for positioning and horizontal bounds for collision detection
+   *
+   * @param {int} deltaX
+   */
+  updateHorizontalBounds(deltaX) {
+    this.coords.x += deltaX;
+    this.bounds.left += deltaX;
+    this.bounds.right += deltaX;
+
+    // Offset position by parent origin x-coordinate
+    this.animationController.updateX(this.coords.x - this.origin.x);
+  }
+
+  /**
+   * Reset slide conditions and animation
+   */
+  disableSlide() {
+    this.animationController.updateSlide(true);
+    this.sliding = false;
+    this.slideTime = 0;
+  }
+
+  /**
+   * Jump, check for collisions, and update vertical position and animation. Jump can only last as long
+   * as jumpTimeLimit and must be on the ground to initiate, obviously
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   */
+  jump(collisionObjects) {
+    if (!activeKeys.jump) {
+      if (this.jumping) {
         this.jumping = false;
-        this.grounded = true;
-        this.jumpTime = 0;
-        this.animationController.updateJump(true);
+      }
+
+      this.jumpButtonReleased = true;
+      return;
     }
 
-    /**
-     * Check for collisions either the edges of the window or any of the collisionObjects by
-     * calculating the distance to each, ensuring they are within the collidable bounds, and
-     * that Mega Man is moving towards them to prevent sticking to walls after colliding
-     *  
-     * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
-     * @returns {boolean}
-     */
-    checkHorizontalCollision(collisionObjects) {
-        // Check collision with left or right edge of page
-        const leftDistance = Math.abs(Window.left - this.bounds.left);
-        const rightDistance = Math.abs(Window.right - this.bounds.right);
-        if ((leftDistance <= MegaMan.collisionDistance && this.direction == -1) ||
-            (rightDistance <= MegaMan.collisionDistance && this.direction == 1)) return true;
+    // First frame of jumping
+    if (!this.jumping && this.jumpButtonReleased && this.grounded)
+      this.enableJumping();
 
-        // Check all possible collision objects
-        for (const object of collisionObjects) {
-            // Check not within y bounds of object
-            if (this.checkObjectWithinYBounds(object)) continue;
+    // Don't continue jumping if not jumping and not on the ground
+    if (!this.jumping && !this.grounded) return;
 
-            // Check close enough to collide with
-            const leftDistance = Math.abs(object.right - this.bounds.left);
-            const rightDistance = Math.abs(object.left - this.bounds.right);
-            if ((leftDistance > MegaMan.collisionDistance && this.direction == -1) ||
-                (rightDistance > MegaMan.collisionDistance && this.direction == 1)) continue;
-
-            return true;
-        }
-
-        return false;
+    // Check ceiling above Mega Man or jump time past limit and stop jumping accordingly
+    if (
+      this.checkHitCeiling(collisionObjects) ||
+      this.jumpTime >= MegaMan.jumpTimeLimit
+    ) {
+      this.jumping = false;
+      return;
     }
 
-    /**
-     * Check for collisions either the top of the window or any of the collisionObjects by
-     * calculating the distance to each and ensuring they are within the collidable bounds
-     *  
-     * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
-     * @returns {boolean}
-     */
-    checkHitCeiling(collisionObjects) {
-        // Check hit ceiling on top of page
-        const distance = Math.abs(Window.top - this.bounds.top);
-        if (distance <= MegaMan.collisionDistance) return true;
+    // Calculate velocity for one frame
+    const velocity = MegaMan.jumpingSpeed * Time.deltaTime;
 
-        // Check all possible ceiling objects
-        for (const object of collisionObjects) {
-            // Check Mega Man above the object
-            if (this.bounds.bottom < object.bottom) continue;
+    // Increment time to stop jumping too far
+    this.jumpTime += velocity;
 
-            // Check not within x bounds of object
-            if (this.checkWithinHorizontalBounds(object)) continue;
+    // Update position variable to translate in CSS
+    this.updateVerticalBounds(-velocity);
 
-            // Check close enough to collide with
-            const distance = Math.abs(object.bottom - this.bounds.top);
-            if (distance > MegaMan.collisionDistance) continue;
+    // In air = no longer grounded
+    this.grounded = false;
+  }
 
-            return true;
-        }
+  /**
+   * Set jump conditions and animation
+   *
+   * // TODO: Change this to triggerJump() and add if statement in here
+   */
+  enableJumping() {
+    if (activeKeys.down || this.slideLocked) return;
 
-        return false;
+    if (this.sliding) {
+      this.animationController.updateSlide(true);
+      this.sliding = false;
+      this.slideTime = 0;
     }
 
-    /**
-     * Check for collisions either the bottom of the window or any of the collisionObjects by
-     * calculating the distance to each and ensuring they are within the collidable bounds
-     *  
-     * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
-     * @returns {boolean}
-     */
-    checkOnGround(collisionObjects) {
-        // Check on ground at bottom of page
-        const distance = Math.abs(Window.bottom - this.bounds.bottom);
-        if (distance <= MegaMan.collisionDistance) {
-            this.disableGravity();
+    this.enableFalling();
 
-            this.updateVerticalBounds(distance);
-            return true;
-        }
+    this.jumping = true;
+    this.jumpButtonReleased = false;
+  }
 
-        // Check all possible ground objects
-        for (const object of collisionObjects) {
-            // Check Mega Man below the object
-            if (this.bounds.bottom > object.top) continue;
+  /**
+   * Set fall conditions and animation
+   */
+  enableFalling() {
+    this.grounded = false;
+    this.slideLocked = true;
+    this.animationController.updateJump();
+    this.animationController.updateWalk(true);
+    this.animationController.updateSlide(true);
+    this.animationController.updateAttack(true);
+  }
 
-            // Check not within x bounds of object
-            if (this.checkWithinHorizontalBounds(object)) continue;
+  /**
+   * Fall until ground is reached
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   */
+  applyGravity(collisionObjects) {
+    // Check not jumping or grounded
+    if (this.jumping || this.grounded) return;
 
-            // Check close enough to collide with
-            const distance = Math.abs(object.top - this.bounds.bottom);
-            if (distance > MegaMan.collisionDistance) continue;
+    // Check collision with ground
+    if (this.checkOnGround(collisionObjects)) return;
 
-            this.disableGravity();
+    // Calculate velocity and update y coordinate to move downwards
+    const velocity = MegaMan.gravity * Time.deltaTime;
+    this.updateVerticalBounds(velocity);
+  }
 
-            this.updateVerticalBounds(distance);
+  /**
+   * Reset grounded conditions and disable jump animation
+   */
+  disableGravity() {
+    this.jumping = false;
+    this.grounded = true;
+    this.jumpTime = 0;
+    this.animationController.updateJump(true);
+  }
 
-            return true;
-        }
+  /**
+   * Check for collisions either the edges of the window or any of the collisionObjects by
+   * calculating the distance to each, ensuring they are within the collidable bounds, and
+   * that Mega Man is moving towards them to prevent sticking to walls after colliding
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   * @returns {boolean}
+   */
+  checkHorizontalCollision(collisionObjects) {
+    // Check collision with left or right edge of page
+    const leftDistance = Math.abs(Window.left - this.bounds.left);
+    const rightDistance = Math.abs(Window.right - this.bounds.right);
+    if (
+      (leftDistance <= MegaMan.collisionDistance && this.direction == -1) ||
+      (rightDistance <= MegaMan.collisionDistance && this.direction == 1)
+    )
+      return true;
 
-        return false;
+    // Check all possible collision objects
+    for (const object of collisionObjects) {
+      // Check not within y bounds of object
+      if (this.checkObjectWithinYBounds(object)) continue;
+
+      // Check close enough to collide with
+      const leftDistance = Math.abs(object.right - this.bounds.left);
+      const rightDistance = Math.abs(object.left - this.bounds.right);
+      if (
+        (leftDistance > MegaMan.collisionDistance && this.direction == -1) ||
+        (rightDistance > MegaMan.collisionDistance && this.direction == 1)
+      )
+        continue;
+
+      return true;
     }
 
-    /**
-     * Check if the given object is within the horizontal bounds of Mega Man
-     * 
-     * @param {DOMRect} object - Bounding rectangle of the object to check
-     * @returns {boolean} - True if the object is within Mega Man's X bounds, false otherwise.
-     */
-    checkWithinHorizontalBounds(object) {
-        const left = this.bounds.left + MegaMan.collisionDistance;
-        const right = this.bounds.right - MegaMan.collisionDistance;
-        return (right < object.left || left > object.right) && (left < object.right || right > object.left);
+    return false;
+  }
+
+  /**
+   * Check for collisions either the top of the window or any of the collisionObjects by
+   * calculating the distance to each and ensuring they are within the collidable bounds
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   * @returns {boolean}
+   */
+  checkHitCeiling(collisionObjects) {
+    // Check hit ceiling on top of page
+    const distance = Math.abs(Window.top - this.bounds.top);
+    if (distance <= MegaMan.collisionDistance) return true;
+
+    // Check all possible ceiling objects
+    for (const object of collisionObjects) {
+      // Check Mega Man above the object
+      if (this.bounds.bottom < object.bottom) continue;
+
+      // Check not within x bounds of object
+      if (this.checkWithinHorizontalBounds(object)) continue;
+
+      // Check close enough to collide with
+      const distance = Math.abs(object.bottom - this.bounds.top);
+      if (distance > MegaMan.collisionDistance) continue;
+
+      return true;
     }
 
-    /**
-     * Check if the given object is within the vertical bounds of Mega Man
-     * 
-     * @param {DOMRect} object - Bounding rectangle of the object to check
-     * @returns {boolean} - True if the object is within Mega Man's Y bounds, false otherwise.
-     */
-    checkObjectWithinYBounds(object) {
-        const top = this.bounds.top + MegaMan.collisionDistance;
-        const bottom = this.bounds.bottom - MegaMan.collisionDistance;
-        return (top < object.bottom || bottom > object.top) && (bottom < object.top || top > object.bottom);
+    return false;
+  }
+
+  /**
+   * Check for collisions either the bottom of the window or any of the collisionObjects by
+   * calculating the distance to each and ensuring they are within the collidable bounds
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   * @returns {boolean}
+   */
+  checkOnGround(collisionObjects) {
+    // Check on ground at bottom of page
+    const distance = Math.abs(Window.bottom - this.bounds.bottom);
+    if (distance <= MegaMan.collisionDistance) {
+      this.disableGravity();
+
+      this.updateVerticalBounds(distance);
+      return true;
     }
 
-    /**
-     * Update the y-coordinate as well as the top and bottom bounds to use in collision detection
-     * 
-     * @param {int} deltaY 
-     */
-    updateVerticalBounds(deltaY) {
-        this.coords.y += deltaY;
-        this.bounds.top += deltaY;
-        this.bounds.bottom += deltaY;
+    // Check all possible ground objects
+    for (const object of collisionObjects) {
+      // Check Mega Man below the object
+      if (this.bounds.bottom > object.top) continue;
 
-        this.animationController.updateY(this.coords.y);
+      // Check not within x bounds of object
+      if (this.checkWithinHorizontalBounds(object)) continue;
+
+      // Check close enough to collide with
+      const distance = Math.abs(object.top - this.bounds.bottom);
+      if (distance > MegaMan.collisionDistance) continue;
+
+      this.disableGravity();
+
+      this.updateVerticalBounds(distance);
+
+      return true;
     }
 
-    /**
-     * Update attack animation, shoot a bullet, and reset charge to prevent multiple charged shots
-     */
-    attack(force = false) {
-        // Stop charging
-        this.charging = force;
+    // TODO: Check failing very randomly while sliding / jumping, maybe even just walking. Likely some kind of bounds check error
 
-        // Allow shot before charge, but don't shoot two in succession unless charge past minimum
-        if (this.charge < MegaMan.minChargeValue && !force) return;
+    return false;
+  }
 
-        this.animationController.updateAttack();
+  /**
+   * Check if the given object is within the horizontal bounds of Mega Man
+   *
+   * @param {DOMRect} object - Bounding rectangle of the object to check
+   * @returns {boolean} - True if the object is within Mega Man's X bounds, false otherwise.
+   */
+  checkWithinHorizontalBounds(object) {
+    const left = this.bounds.left + MegaMan.collisionDistance;
+    const right = this.bounds.right - MegaMan.collisionDistance;
+    return (
+      (right < object.left || left > object.right) &&
+      (left < object.right || right > object.left)
+    );
+  }
 
-        // Spawn bullet
-        new Bullet(this.charge, this.direction, this.element.getBoundingClientRect());
+  /**
+   * Check if the given object is within the vertical bounds of Mega Man
+   *
+   * @param {DOMRect} object - Bounding rectangle of the object to check
+   * @returns {boolean} - True if the object is within Mega Man's Y bounds, false otherwise.
+   */
+  checkObjectWithinYBounds(object) {
+    const top = this.bounds.top + MegaMan.collisionDistance;
+    const bottom = this.bounds.bottom - MegaMan.collisionDistance;
+    return (
+      (top < object.bottom || bottom > object.top) &&
+      (bottom < object.top || top > object.bottom)
+    );
+  }
 
-        this.charge = 0;
+  /**
+   * Update the y-coordinate as well as the top and bottom bounds to use in collision detection
+   *
+   * @param {int} deltaY
+   */
+  updateVerticalBounds(deltaY) {
+    this.coords.y += deltaY;
+    this.bounds.top += deltaY;
+    this.bounds.bottom += deltaY;
+
+    this.animationController.updateY(this.coords.y);
+  }
+
+  /**
+   * Update attack animation, shoot a bullet, and reset charge to prevent multiple charged shots
+   */
+  attack(force = false) {
+    if (this.sliding) return;
+
+    // Stop charging
+    this.charging = force;
+
+    // Allow shot before charge, but don't shoot two in succession unless charge past minimum
+    if (this.charge < MegaMan.minChargeValue && !force) return;
+
+    this.animationController.updateAttack();
+
+    // Spawn bullet
+    new Bullet(
+      this.charge,
+      this.direction,
+      this.element.getBoundingClientRect()
+    );
+
+    this.charge = 0;
+  }
+
+  /**
+   * Increment charge for Mega Man based on the duration of the attack button being held down.
+   * Update charge animation based on charge value every time chargeInterval passes the rate
+   */
+  buildUpCharge() {
+    if (!activeKeys.attack) {
+      if (this.charging) this.attack();
+      return;
     }
 
-    /**
-     * Increment charge for Mega Man based on the duration of the attack button being held down.
-     * Update charge animation based on charge value every time chargeInterval passes the rate
-     */
-    buildUpCharge() {
-        if (!activeKeys.attack) {
-            if (this.charging) this.attack();
-            return;
-        }
+    // Always do initial attack with no charge
+    if (!this.charging) this.attack(true);
 
-        // Always do initial attack with no charge
-        if (!this.charging) this.attack(true);
+    // Enable charging
+    this.charging = true;
 
-        // Enable charging
-        this.charging = true;
+    // Increment interval by deltaTime
+    const deltaTime = Time.deltaTime;
+    this.chargeInterval += deltaTime;
 
-        // Increment interval by deltaTime
-        const deltaTime = Time.deltaTime;
-        this.chargeInterval += deltaTime;
+    // Wait until charge rate has been reached to update animation
+    if (this.chargeInterval < MegaMan.chargeIntervalRate) return;
 
-        // Wait until charge rate has been reached to update animation
-        if (this.chargeInterval < MegaMan.chargeIntervalRate) return;
+    // Reset interval
+    this.chargeInterval = 0;
 
-        // Reset interval
-        this.chargeInterval = 0;
+    // Increment charge per frame
+    this.charge += MegaMan.chargeRate * deltaTime;
 
-        // Increment charge per frame
-        this.charge += MegaMan.chargeRate * deltaTime;
+    this.animationController.updateCharge(this.charge);
+  }
 
-        this.animationController.updateCharge(this.charge);
-    }
-
-    /**
-     * Update position in global context for use with collisions
-     * 
-     * Only to be used during resize event and constructor to prevent constant refresh of the document
-     */
-    updateBounds() {
-        const rect = this.element.getBoundingClientRect();
-        this.bounds = {
-            top: rect.top,
-            bottom: rect.bottom,
-            left: rect.left,
-            right: rect.right,
-        };
-    }
+  /**
+   * Update position in global context for use with collisions
+   *
+   * Only to be used during resize event and constructor to prevent constant refresh of the document
+   */
+  updateBounds() {
+    const rect = this.element.getBoundingClientRect();
+    this.bounds = {
+      top: rect.top,
+      bottom: rect.bottom,
+      left: rect.left,
+      right: rect.right,
+    };
+  }
 }
