@@ -39,13 +39,13 @@
 /* Animation */
 
 .mega-man.spawn-animation-state {
-  background-position: -384px 0px;
+  background-position: -0px -224px;
   animation: spawnAnimation 0.1s steps(1, end) infinite;
 }
 
 @keyframes spawnAnimation {
   0% {
-    background-position: calc(-384px + (var(--spawn-state) * -32px)) 0px;
+    background-position: calc((var(--spawn-state) * -32px)) -224px;
   }
 }
 

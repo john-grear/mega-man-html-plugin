@@ -1,54 +1,54 @@
 .bullet {
-    --position: 0px;
-    --direction: 1;
+  --position: 0px;
+  --direction: 1;
 
-    /* Sprite Initialization */
-    width: 32px;
-    height: 32px;
-    background-image: url('../images/megaman-animations.png');
-    background-position: -352px 0;
-    background-repeat: no-repeat;
+  /* Sprite Initialization */
+  width: 32px;
+  height: 32px;
+  background-image: url("../images/megaman-animations.png");
+  background-position: 0px -256px;
+  background-repeat: no-repeat;
 
-    /* Position, Movement, and Scale */
-    position: absolute;
-    transform: translateX(var(--position)) scale(calc(var(--direction) * 4), 4);
-    transform-origin: center;
+  /* Position, Movement, and Scale */
+  position: absolute;
+  transform: translateX(var(--position)) scale(calc(var(--direction) * 4), 4);
+  transform-origin: center;
 }
 
 .bullet.low-charge {
-    animation: lowChargeBullet 0.25s steps(1, end) infinite;
-    animation-fill-mode: forwards;
+  animation: lowChargeBullet 0.25s steps(1, end) infinite;
+  animation-fill-mode: forwards;
 }
 
 @keyframes lowChargeBullet {
-    0% {
-        background-position: -352px -32px;
-    }
+  0% {
+    background-position: -32px -256px;
+  }
 
-    50% {
-        background-position: -384px -32px;
-    }
+  50% {
+    background-position: -64px -256px;
+  }
 }
 
 .bullet.max-charge {
-    animation: maxChargeBullet 0.25s steps(1, end) infinite;
-    animation-fill-mode: forwards;
+  animation: maxChargeBullet 0.25s steps(1, end) infinite;
+  animation-fill-mode: forwards;
 }
 
 @keyframes maxChargeBullet {
-    0% {
-        background-position: -352px -128px;
-    }
+  0% {
+    background-position: -96px -256px;
+  }
 
-    25% {
-        background-position: -384px -128px;
-    }
+  25% {
+    background-position: -128px -256px;
+  }
 
-    50% {
-        background-position: -416px -128px;
-    }
+  50% {
+    background-position: -160px -256px;
+  }
 
-    75% {
-        background-position: -448px -128px;
-    }
+  75% {
+    background-position: -192px -256px;
+  }
 }
