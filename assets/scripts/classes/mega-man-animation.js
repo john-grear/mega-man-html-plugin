@@ -20,6 +20,7 @@ export default class MegaManAnimation {
   static maxWalkState = 30;
   static walkFramePause = 10; // 30 / 10 = 3 frames over 30 update calls
   static kneeBendFrameLength = 5;
+  static kneeBendFrame = 2;
 
   static attackTimeout = 250; // Time (ms) before disabling attack animation
 
@@ -196,7 +197,7 @@ export default class MegaManAnimation {
       }
 
       if (this.walkState < 0) {
-        this.style.setProperty("--walk-state", 1);
+        this.style.setProperty("--walk-state", MegaManAnimation.kneeBendFrame);
         ++this.walkState;
         requestAnimationFrame(() => this.updateWalk(true));
       } else {
@@ -208,13 +209,13 @@ export default class MegaManAnimation {
     }
 
     if (this.walkState < 0) {
-      this.style.setProperty("--walk-state", 1);
+      this.style.setProperty("--walk-state", MegaManAnimation.kneeBendFrame);
       ++this.walkState;
     } else {
       const currentWalkFrame = Math.floor(
         this.walkState / MegaManAnimation.walkFramePause
       );
-      this.style.setProperty("--walk-state", currentWalkFrame + 2); // Skip idle and knee bend frame
+      this.style.setProperty("--walk-state", currentWalkFrame + 3); // Skip idle and knee bend frame
       this.walkState = (this.walkState + 1) % MegaManAnimation.maxWalkState;
     }
   }
@@ -230,10 +231,11 @@ export default class MegaManAnimation {
     if (disable) {
       this.style.setProperty("--jump-state", 0);
       if (!this.idle) this.updateIdle();
-    } else {
-      this.updateWalk(true);
-      this.style.setProperty("--jump-state", 1);
+      return;
     }
+
+    this.updateWalk(true);
+    this.style.setProperty("--jump-state", 1);
   }
 
   /**
@@ -248,10 +250,10 @@ export default class MegaManAnimation {
       this.style.setProperty("--slide-state", 0);
       if (!this.idle) this.updateIdle();
       return;
-    } else {
-      this.updateWalk(true);
-      this.style.setProperty("--slide-state", 1);
     }
+
+    this.updateWalk(true);
+    this.style.setProperty("--slide-state", 1);
   }
 
   /**
@@ -267,12 +269,14 @@ export default class MegaManAnimation {
       this.updateCharge(0);
       if (!this.idle) this.updateIdle();
       return;
-    } else if (this.activeStates.jump) {
+    }
+
+    if (this.activeStates.jump) {
       this.style.setProperty("--attack-state", 1); // Jumping + attacking
     } else if (this.activeStates.walk) {
       this.style.setProperty("--attack-state", 4); // Walking + attacking
     } else {
-      this.style.setProperty("--attack-state", 5); // Idle, skip over knee bend frame
+      this.style.setProperty("--attack-state", 6); // Idle, skip over knee bend and idle frames
     }
 
     // Wait before disabling attack and charge animations

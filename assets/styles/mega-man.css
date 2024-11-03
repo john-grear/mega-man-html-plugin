@@ -3,11 +3,11 @@
   --positionY: 0px;
   --direction: 1;
 
-  /* 0 (not idle), 1 (idle) */
+  /* 0 (idle), 1 (blink) */
   --idle-state: 0;
   /* 0 (idle), 1 - 2 (spawning) */
   --spawn-state: 0;
-  /* 0 (idle), 1 - 3 (walking) */
+  /* 0 (idle), 1 (knee bend), 2 - 4 (walking) */
   --walk-state: 0;
   /* 0 (idle), 1 (jumping) */
   --jump-state: 0;
@@ -59,9 +59,8 @@
   0% {
     background-position: calc(
         (
-            (var(--idle-state) * 15) + var(--walk-state) +
-              (var(--jump-state) * 9) + (var(--slide-state) * 16) +
-              var(--attack-state)
+            var(--idle-state) + var(--walk-state) + (var(--jump-state) * 10) +
+              (var(--slide-state) * 12) + var(--attack-state)
           ) * -32px
       )
       calc(var(--charge-state) * -32px);
