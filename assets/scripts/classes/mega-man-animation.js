@@ -8,7 +8,6 @@ export default class MegaManAnimation {
     jump: false,
     slide: false,
     attack: false,
-    charge: false,
   };
 
   static maxIdleState = 150;
@@ -136,7 +135,6 @@ export default class MegaManAnimation {
    */
   updateIdle(disable = false) {
     if (disable) {
-      this.idleState = 0;
       this.idle = false;
       this.element.style.setProperty("--idle-state", 0);
       return;
@@ -291,8 +289,6 @@ export default class MegaManAnimation {
    * @returns {void}
    */
   updateCharge(charge = 0) {
-    this.activeStates.charge = charge > 0;
-
     if (charge === 0) {
       this.chargeState = 0;
       this.element.style.setProperty("--charge-state", 0);
