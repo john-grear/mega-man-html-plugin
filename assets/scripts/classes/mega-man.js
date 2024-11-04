@@ -98,12 +98,10 @@ export default class MegaMan {
     if (this.coords.y < 0) {
       // Drop into place
       this.collisionController.updateVerticalBounds(MegaMan.spawnSpeed);
-      this.animationController.updateY(this.coords.y);
       requestAnimationFrame(() => this.spawn());
     } else if (this.coords.y + MegaMan.spawnSpeed > 0) {
       // Adjust position to 0
       this.collisionController.updateVerticalBounds(-this.coords.y);
-      this.animationController.updateY(this.coords.y);
 
       // Update spawn animation
       if (!this.animationController.updateSpawn()) {
@@ -366,7 +364,6 @@ export default class MegaMan {
 
     // Update position variable to translate in CSS
     this.collisionController.updateVerticalBounds(-velocity);
-    this.animationController.updateY(this.coords.y);
 
     // In air = no longer grounded
     this.grounded = false;
@@ -422,7 +419,6 @@ export default class MegaMan {
     // Calculate velocity and update y coordinate to move downwards
     const velocity = MegaMan.gravity * Time.deltaTime;
     this.collisionController.updateVerticalBounds(velocity);
-    this.animationController.updateY(this.coords.y);
   }
 
   /**
