@@ -1,6 +1,6 @@
 import MegaMan from "./mega-man.js";
 
-export default class MegaManAnimation {
+export default class MegaManAnimationController {
   idle = false;
   activeStates = {
     spawn: false,
@@ -92,13 +92,15 @@ export default class MegaManAnimation {
       this.updateBase();
       return true;
     } else {
-      if (++this.spawnState > MegaManAnimation.maxSpawnState) {
+      if (++this.spawnState > MegaManAnimationController.maxSpawnState) {
         this.spawnState = 0;
         return true;
       }
 
       const adjustedSpawnState =
-        Math.floor(this.spawnState / MegaManAnimation.spawnFramePause) + 1;
+        Math.floor(
+          this.spawnState / MegaManAnimationController.spawnFramePause
+        ) + 1;
       this.style.setProperty("--spawn-state", adjustedSpawnState); // 1 - 2
 
       return false;
@@ -150,16 +152,17 @@ export default class MegaManAnimation {
 
       this.idle = true;
 
-      if (++this.idleState < MegaManAnimation.maxIdleState) {
+      if (++this.idleState < MegaManAnimationController.maxIdleState) {
         requestAnimationFrame(() => this.updateIdle());
         return;
       }
 
-      if (this.idleState === MegaManAnimation.maxIdleState) {
+      if (this.idleState === MegaManAnimationController.maxIdleState) {
         this.style.setProperty("--idle-state", 1);
       } else if (
         this.idleState >=
-        MegaManAnimation.maxIdleState + MegaManAnimation.maxIdleFrames
+        MegaManAnimationController.maxIdleState +
+          MegaManAnimationController.maxIdleFrames
       ) {
         this.idleState = 0;
         this.style.setProperty("--idle-state", 0);
@@ -183,7 +186,7 @@ export default class MegaManAnimation {
     // Don't walk if jumping or sliding
     if (this.activeStates.jump || this.activeStates.slide) {
       this.style.setProperty("--walk-state", 0);
-      this.walkState = -MegaManAnimation.kneeBendFrameLength;
+      this.walkState = -MegaManAnimationController.kneeBendFrameLength;
       if (!this.idle) this.updateIdle();
       return;
     }
@@ -191,30 +194,37 @@ export default class MegaManAnimation {
     // Display knee bend frame before disabling
     if (disable) {
       if (this.walkState > 0) {
-        this.walkState = -MegaManAnimation.kneeBendFrameLength;
+        this.walkState = -MegaManAnimationController.kneeBendFrameLength;
       }
 
       if (this.walkState < 0) {
-        this.style.setProperty("--walk-state", MegaManAnimation.kneeBendFrame);
+        this.style.setProperty(
+          "--walk-state",
+          MegaManAnimationController.kneeBendFrame
+        );
         ++this.walkState;
         requestAnimationFrame(() => this.updateWalk(true));
       } else {
         this.style.setProperty("--walk-state", 0);
-        this.walkState = -MegaManAnimation.kneeBendFrameLength;
+        this.walkState = -MegaManAnimationController.kneeBendFrameLength;
         this.updateIdle();
       }
       return;
     }
 
     if (this.walkState < 0) {
-      this.style.setProperty("--walk-state", MegaManAnimation.kneeBendFrame);
+      this.style.setProperty(
+        "--walk-state",
+        MegaManAnimationController.kneeBendFrame
+      );
       ++this.walkState;
     } else {
       const currentWalkFrame = Math.floor(
-        this.walkState / MegaManAnimation.walkFramePause
+        this.walkState / MegaManAnimationController.walkFramePause
       );
       this.style.setProperty("--walk-state", currentWalkFrame + 3); // Skip idle and knee bend frame
-      this.walkState = (this.walkState + 1) % MegaManAnimation.maxWalkState;
+      this.walkState =
+        (this.walkState + 1) % MegaManAnimationController.maxWalkState;
     }
   }
 
@@ -278,7 +288,10 @@ export default class MegaManAnimation {
     }
 
     // Wait before disabling attack and charge animations
-    setTimeout(() => this.updateAttack(true), MegaManAnimation.attackTimeout);
+    setTimeout(
+      () => this.updateAttack(true),
+      MegaManAnimationController.attackTimeout
+    );
   }
 
   /**
@@ -298,7 +311,8 @@ export default class MegaManAnimation {
 
     if (charge < MegaMan.minChargeValue) return;
 
-    this.chargeState = (this.chargeState + 1) % MegaManAnimation.maxChargeState;
+    this.chargeState =
+      (this.chargeState + 1) % MegaManAnimationController.maxChargeState;
 
     if (charge < MegaMan.maxChargeValue) {
       this.style.setProperty("--charge-state", (this.chargeState % 3) + 1);
