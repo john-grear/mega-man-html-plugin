@@ -182,7 +182,7 @@ export default class MegaMan {
   }
 
   /**
-   * Attempt to trigger a slide if not already sliding, otherwise continue sliding
+   * Attempt to trigger walking if not already walking, otherwise continue walking
    *
    * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
    */
