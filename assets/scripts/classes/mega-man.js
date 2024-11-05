@@ -182,29 +182,46 @@ export default class MegaMan {
   }
 
   /**
+   * Attempt to trigger a slide if not already sliding, otherwise continue sliding
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   */
+  walk(collisionObjects) {
+    if (this.walking) {
+      this.updateWalk(collisionObjects);
+    } else {
+      this.triggerWalk(collisionObjects);
+    }
+  }
+
+  /**
+   * First check if walking is allowed, then start walking
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   */
+  triggerWalk(collisionObjects) {
+    if (this.checkWalkConditions()) return;
+
+    this.walking = true;
+
+    this.updateWalk(collisionObjects);
+  }
+
+  /**
    * Walk left or right, check for collisions, and update direction, horizontal position, and animation
    *
    * Variables update translate call in mega-man.css
    *
    * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
    */
-  walk(collisionObjects) {
-    const leftPressed = activeKeys.left;
-    const rightPressed = activeKeys.right;
-    // Don't move if pressing either left or right or both left and right
-    if ((!leftPressed && !rightPressed) || (leftPressed && rightPressed)) {
-      if (this.walking) {
-        this.animationController.updateWalk(true);
-        this.walking = false;
-      }
+  updateWalk(collisionObjects) {
+    if (this.checkWalkConditions()) {
+      this.animationController.updateWalk(true);
+      this.walking = false;
       return;
     }
 
-    if (this.sliding) return;
-
-    this.walking = true;
-
-    this.transformController.updateDirection(leftPressed);
+    this.transformController.updateDirection(activeKeys.left);
 
     this.animationController.updateWalk();
 
@@ -215,14 +232,37 @@ export default class MegaMan {
     const velocity = MegaMan.walkingSpeed * this.direction * Time.deltaTime;
     this.collisionController.updateHorizontalBounds(velocity);
 
-    // Check in air and not jumping to enable falling
-    if (
-      !this.jumping &&
-      !this.collisionController.checkOnGround(collisionObjects)
-    ) {
+    if (this.checkFallConditions(collisionObjects)) {
       this.disableGravity();
       this.enableFalling(true);
     }
+  }
+
+  /**
+   * Check if only either left or right is pressed, not both, and not sliding
+   *
+   * @returns {boolean}
+   */
+  checkWalkConditions() {
+    const leftPressed = activeKeys.left;
+    const rightPressed = activeKeys.right;
+    return (
+      (!leftPressed && !rightPressed) ||
+      (leftPressed && rightPressed) ||
+      this.sliding
+    );
+  }
+
+  /**
+   * Check if not jumping and in the air
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   * @returns {boolean}
+   */
+  checkFallConditions(collisionObjects) {
+    return (
+      !this.jumping && !this.collisionController.checkOnGround(collisionObjects)
+    );
   }
 
   /**
@@ -288,8 +328,7 @@ export default class MegaMan {
     const velocity = MegaMan.slideSpeed * this.direction * Time.deltaTime;
     this.collisionController.updateHorizontalBounds(velocity);
 
-    // Check if on ground; if not, stop sliding and initiate falling
-    if (!this.collisionController.checkOnGround(collisionObjects)) {
+    if (this.checkFallConditions(collisionObjects)) {
       this.disableGravity();
       this.disableSlide();
       this.enableFalling(true);
