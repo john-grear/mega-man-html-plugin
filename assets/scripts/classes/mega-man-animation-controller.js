@@ -309,7 +309,7 @@ export default class MegaManAnimationController {
       return;
     }
 
-    if (charge < MegaMan.minChargeValue) return;
+    if (charge < MegaMan.lowChargeValue) return;
 
     this.chargeState =
       (this.chargeState + 1) % MegaManAnimationController.maxChargeState;
