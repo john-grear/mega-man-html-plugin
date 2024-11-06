@@ -364,33 +364,32 @@ export default class MegaMan {
   }
 
   /**
-   * Jump, check for collisions, and update vertical position and animation. Jump can only last as long
-   * as jumpTimeLimit and must be on the ground to initiate, obviously
+   * Attempt to trigger a jump if not already jumping, otherwise continue jumping
    *
    * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
    */
   jump(collisionObjects) {
-    if (!activeKeys.jump) {
-      if (this.jumping) {
-        this.jumping = false;
-      }
+    if (this.jumping) {
+      this.updateJump(collisionObjects);
+    } else {
+      this.triggerJump(collisionObjects);
+    }
+  }
 
+  /**
+   * Jump, check for collisions, and update vertical position and animation. Must pass jump conditions or
+   * the jump will be disabled
+   *
+   * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
+   */
+  updateJump(collisionObjects) {
+    if (!activeKeys.jump) {
+      this.jumping = false;
       this.jumpButtonReleased = true;
       return;
     }
 
-    // First frame of jumping
-    if (!this.jumping && this.jumpButtonReleased && this.grounded)
-      this.enableJumping();
-
-    // Don't continue jumping if not jumping and not on the ground
-    if (!this.jumping && !this.grounded) return;
-
-    // Check ceiling above Mega Man or jump time past limit and stop jumping accordingly
-    if (
-      this.collisionController.checkHitCeiling(collisionObjects) ||
-      this.jumpTime >= MegaMan.jumpTimeLimit
-    ) {
+    if (!this.checkJumpConditions(collisionObjects)) {
       this.jumping = false;
       return;
     }
@@ -403,18 +402,18 @@ export default class MegaMan {
 
     // Update position variable to translate in CSS
     this.collisionController.updateVerticalBounds(-velocity);
-
-    // In air = no longer grounded
-    this.grounded = false;
   }
 
   /**
-   * Set jump conditions and animation
-   *
-   * // TODO: Change this to triggerJump() and add if statement in here
+   * First check if jumping is allowed, then start jumping
    */
-  enableJumping() {
-    if (activeKeys.down || this.slideLocked) return;
+  triggerJump() {
+    if (!activeKeys.jump) {
+      this.jumpButtonReleased = true;
+      return;
+    }
+
+    if (activeKeys.down || this.slideLocked || !this.grounded) return;
 
     if (this.sliding) {
       this.animationController.updateSlide(true);
@@ -426,6 +425,18 @@ export default class MegaMan {
 
     this.jumping = true;
     this.jumpButtonReleased = false;
+  }
+
+  /**
+   * Check if not colliding with something above (ceiling) or jump time is below the limit
+   *
+   * @returns {boolean}
+   */
+  checkJumpConditions(collisionObjects) {
+    return (
+      !this.collisionController.checkHitCeiling(collisionObjects) &&
+      this.jumpTime < MegaMan.jumpTimeLimit
+    );
   }
 
   /**
