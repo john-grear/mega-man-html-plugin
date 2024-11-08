@@ -140,33 +140,33 @@ export default class MegaManAnimationController {
       this.idle = false;
       this.element.style.setProperty("--idle-state", 0);
       return;
-    } else {
-      const anyActiveStates = Object.values(this.activeStates).some(
-        (state) => state
-      );
+    }
 
-      if (anyActiveStates) {
-        this.updateIdle(true);
-        return;
-      }
+    const anyActiveStates = Object.values(this.activeStates).some(
+      (state) => state
+    );
 
-      this.idle = true;
+    if (anyActiveStates) {
+      this.updateIdle(true);
+      return;
+    }
 
-      if (++this.idleState < MegaManAnimationController.maxIdleState) {
-        requestAnimationFrame(() => this.updateIdle());
-        return;
-      }
+    this.idle = true;
 
-      if (this.idleState === MegaManAnimationController.maxIdleState) {
-        this.style.setProperty("--idle-state", 1);
-      } else if (
-        this.idleState >=
-        MegaManAnimationController.maxIdleState +
-          MegaManAnimationController.maxIdleFrames
-      ) {
-        this.idleState = 0;
-        this.style.setProperty("--idle-state", 0);
-      }
+    if (++this.idleState < MegaManAnimationController.maxIdleState) {
+      requestAnimationFrame(() => this.updateIdle());
+      return;
+    }
+
+    if (this.idleState === MegaManAnimationController.maxIdleState) {
+      this.style.setProperty("--idle-state", 1);
+    } else if (
+      this.idleState >=
+      MegaManAnimationController.maxIdleState +
+        MegaManAnimationController.maxIdleFrames
+    ) {
+      this.idleState = 0;
+      this.style.setProperty("--idle-state", 0);
     }
 
     requestAnimationFrame(() => this.updateIdle());
@@ -212,17 +212,28 @@ export default class MegaManAnimationController {
       return;
     }
 
-    if (this.walkState < 0) {
+    this.setAttackStateByMovementState();
+    // TODO: Causing weird image displayed
+    // if (this.activeStates.attack && this.walkState < 0) {
+    //   this.walkState = 0;
+    //   console.log(this.activeStates.attack);
+    // }
+
+    if (this.walkState < 0 && !this.activeStates.attackd) {
       this.style.setProperty(
         "--walk-state",
         MegaManAnimationController.kneeBendFrame
       );
       ++this.walkState;
+      // TODO: Glitchy walk is repeating in here, -3, -1, -3, -1... not -4, -3, -2, -1, 0
     } else {
       const currentWalkFrame = Math.floor(
         this.walkState / MegaManAnimationController.walkFramePause
       );
-      this.style.setProperty("--walk-state", currentWalkFrame + 3); // Skip idle and knee bend frame
+      this.style.setProperty(
+        "--walk-state",
+        currentWalkFrame + MegaManAnimationController.kneeBendFrame + 1
+      ); // Skip idle and knee bend frame
       this.walkState =
         (this.walkState + 1) % MegaManAnimationController.maxWalkState;
     }
@@ -279,6 +290,24 @@ export default class MegaManAnimationController {
       return;
     }
 
+    this.setAttackStateByMovementState();
+
+    // Wait before disabling attack and charge animations
+    setTimeout(
+      () => this.updateAttack(true),
+      MegaManAnimationController.attackTimeout
+    );
+  }
+
+  /**
+   * Set attack state which shifts the x frame by 1, 4, or 6 if they are jumping and
+   * attacking, walking and attacking, or idle and attacking
+   *
+   * @returns {void}
+   */
+  setAttackStateByMovementState() {
+    if (!this.activeStates.attack) return;
+
     if (this.activeStates.jump) {
       this.style.setProperty("--attack-state", 1); // Jumping + attacking
     } else if (this.activeStates.walk) {
@@ -286,12 +315,6 @@ export default class MegaManAnimationController {
     } else {
       this.style.setProperty("--attack-state", 6); // Idle, skip over knee bend and idle frames
     }
-
-    // Wait before disabling attack and charge animations
-    setTimeout(
-      () => this.updateAttack(true),
-      MegaManAnimationController.attackTimeout
-    );
   }
 
   /**

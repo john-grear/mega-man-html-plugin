@@ -200,7 +200,7 @@ export default class MegaMan {
    * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
    */
   triggerWalk(collisionObjects) {
-    if (this.checkWalkConditions()) return;
+    if (!this.checkWalkConditions()) return;
 
     this.walking = true;
 
@@ -215,7 +215,7 @@ export default class MegaMan {
    * @param {CollisionObject[]} [collisionObjects=[]] - Objects to collide with
    */
   updateWalk(collisionObjects) {
-    if (this.checkWalkConditions()) {
+    if (!this.checkWalkConditions()) {
       this.animationController.updateWalk(true);
       this.walking = false;
       return;
@@ -247,9 +247,9 @@ export default class MegaMan {
     const leftPressed = activeKeys.left;
     const rightPressed = activeKeys.right;
     return (
-      (!leftPressed && !rightPressed) ||
-      (leftPressed && rightPressed) ||
-      this.sliding
+      (leftPressed || rightPressed) &&
+      !(leftPressed && rightPressed) &&
+      !this.sliding
     );
   }
 
@@ -361,6 +361,9 @@ export default class MegaMan {
     this.animationController.updateSlide(true);
     this.sliding = false;
     this.slideTime = 0;
+
+    // TODO: Check to see if only charge shots are shot after slide is finished, or if all shots are and change to min if needed
+    if (!this.charging && this.charge > MegaMan.lowChargeValue) this.attack();
   }
 
   /**
@@ -484,15 +487,12 @@ export default class MegaMan {
   /**
    * Update attack animation, shoot a bullet, and reset charge to prevent multiple charged shots
    */
-  attack(force = false) {
-    if (this.sliding) return;
+  attack(isInitialShot = false) {
+    if (!this.checkAttackConditions(isInitialShot)) return;
 
-    // Stop charging
-    this.charging = force;
+    // console.log(`Walking: ${this.checkWalkConditions()}`);
 
-    // Allow shot before charge, but don't shoot two in succession unless charge past minimum
-    if (this.charge < MegaMan.minChargeValue && !force) return;
-
+    // if (!this.checkWalkConditions()) this.animationController.updateWalk();
     this.animationController.updateAttack();
 
     // Spawn bullet
@@ -506,29 +506,53 @@ export default class MegaMan {
   }
 
   /**
+   * Check if this is the initial attack shot before charging or if the charge has surpassed the
+   * minimum charge value to start creating a charge shot and that Mega Man is not sliding
+   */
+  checkAttackConditions(isInitialShot) {
+    return (
+      (this.charge >= MegaMan.minChargeValue || isInitialShot) && !this.sliding
+    );
+  }
+
+  /**
+   * Attempt to trigger charging if not already charging
+   */
+  buildUpCharge() {
+    if (this.charging) {
+      this.updateCharge();
+    } else {
+      this.triggerCharge();
+    }
+  }
+
+  /**
+   * Check if attack button is pressed to enable charging and release the initial uncharged attack
+   */
+  triggerCharge() {
+    if (activeKeys.attack) {
+      this.charging = true;
+      this.attack(true);
+    }
+  }
+
+  /**
    * Increment charge for Mega Man based on the duration of the attack button being held down.
    * Update charge animation based on charge value every time chargeInterval passes the rate
    */
-  buildUpCharge() {
+  updateCharge() {
     if (!activeKeys.attack) {
-      if (this.charging) this.attack();
+      this.charging = false;
+      this.attack();
       return;
     }
 
-    // Always do initial attack with no charge
-    if (!this.charging) this.attack(true);
-
-    // Enable charging
-    this.charging = true;
-
-    // Increment interval by deltaTime
     const deltaTime = Time.deltaTime;
     this.chargeInterval += deltaTime;
 
     // Wait until charge rate has been reached to update animation
     if (this.chargeInterval < MegaMan.chargeIntervalRate) return;
 
-    // Reset interval
     this.chargeInterval = 0;
 
     // Increment charge per frame
